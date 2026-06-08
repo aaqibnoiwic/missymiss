@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1500">
+  <defs>
+    <linearGradient id="a" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#f8f5ef"/>
+      <stop offset="55%" stop-color="#e3c88d"/>
+      <stop offset="100%" stop-color="#a8863a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="1500" fill="url(#a)"/>
+  <rect x="162" y="590" width="876" height="162" rx="81" fill="#fff" fill-opacity=".58"/>
+  <rect x="846" y="544" width="130" height="254" rx="40" fill="#d4af37"/>
+  <text x="116" y="1180" fill="#644d1f" font-family="Georgia, serif" font-size="100">Reclaimed Gold Belt</text>
+  <text x="122" y="1270" fill="#796333" font-family="Arial, sans-serif" font-size="38" letter-spacing="8">CIRCULAR ACCESSORY</text>
+</svg>

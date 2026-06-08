@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Missy Miss
 
-## Getting Started
+Luxury editorial storefront for Missy Miss with:
 
-First, run the development server:
+- `Next.js`
+- `TypeScript`
+- `Tailwind CSS`
+- lightweight shadcn-style UI primitives
+- signed image uploads
+- Neon PostgreSQL persistence through Prisma
+- protected admin CMS and media dashboard
+
+## Setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Copy the environment template:
+
+```bash
+cp .env.example .env.local
+```
+
+3. Fill in:
+
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+- `ADMIN_SECRET`
+- `DATABASE_URL`
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+
+4. Start the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Useful database commands:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run db:push
+npm run db:seed
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Routes
 
-## Learn More
+- `/` storefront homepage
+- `/admin/login` minimal admin sign-in
+- `/admin` protected CMS, product, banner, SEO, gallery, and media dashboard
+- `/shop` all published products
+- `/[slug]` editable CMS pages such as `/about-us`, `/privacy-policy`, and `/shipping-and-returns`
+- `/collections/[slug]` editable collection pages such as `/collections/tops-shirts`
+- `/products/[slug]` product detail pages
 
-To learn more about Next.js, take a look at the following resources:
+## Notes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Uploaded media metadata is normalized by the API and saved to Neon.
+- Pages, banners, categories, products, testimonials, gallery images, and SEO fields are managed from Neon-backed admin forms.

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1500">
+  <defs>
+    <linearGradient id="a" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#fffaf3"/>
+      <stop offset="55%" stop-color="#efd3b1"/>
+      <stop offset="100%" stop-color="#f4b7b6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="1500" fill="url(#a)"/>
+  <rect x="278" y="250" width="644" height="764" rx="210" fill="#fff" fill-opacity=".56"/>
+  <path d="M470 420h260v420H470z" fill="#fff" fill-opacity=".42"/>
+  <text x="118" y="1186" fill="#7b6158" font-family="Georgia, serif" font-size="102">Mini Muse Romper</text>
+  <text x="124" y="1272" fill="#8c7368" font-family="Arial, sans-serif" font-size="38" letter-spacing="8">0-2 YEARS</text>
+</svg>

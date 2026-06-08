@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model MediaAsset {
+  id        String   @id
+  publicId  String   @unique
+  url       String
+  width     Int
+  height    Int
+  format    String
+  bytes     Int
+  alt       String   @default("")
+  folder    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([folder])
+  @@index([createdAt])
+}
+
+model SitePage {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  eyebrow         String   @default("")
+  excerpt         String   @default("")
+  body            String   @default("")
+  pageType        String   @default("page")
+  isPublished     Boolean  @default(true)
+  metaTitle       String   @default("")
+  metaDescription String   @default("")
+  keywords        String   @default("")
+  ogImage         String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([pageType])
+  @@index([isPublished])
+}
+
+model Category {
+  id              String            @id @default(cuid())
+  slug            String            @unique
+  title           String
+  eyebrow         String            @default("")
+  description     String            @default("")
+  collectionType  String            @default("main")
+  ageRange        String            @default("")
+  isPublished     Boolean           @default(true)
+  sortOrder       Int               @default(0)
+  metaTitle       String            @default("")
+  metaDescription String            @default("")
+  keywords        String            @default("")
+  ogImage         String            @default("")
+  products        ProductCategory[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([collectionType])
+  @@index([sortOrder])
+  @@index([isPublished])
+}
+
+model Banner {
+  id              String    @id @default(cuid())
+  title           String
+  subtitle        String    @default("")
+  ctaLabel        String    @default("")
+  ctaHref         String    @default("")
+  desktopImage    String    @default("")
+  mobileImage     String    @default("")
+  scope           String    @default("home")
+  targetSlug      String    @default("")
+  isEnabled       Boolean   @default(true)
+  sortOrder       Int       @default(0)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  metaTitle       String    @default("")
+  metaDescription String    @default("")
+  keywords        String    @default("")
+  ogImage         String    @default("")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([scope, targetSlug])
+  @@index([isEnabled])
+  @@index([sortOrder])
+}
+
+model GalleryImage {
+  id          String   @id @default(cuid())
+  title       String   @default("")
+  imageUrl    String
+  alt         String   @default("")
+  scope       String   @default("lifestyle")
+  targetSlug  String   @default("")
+  isFeatured  Boolean  @default(false)
+  isEnabled   Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([scope, targetSlug])
+  @@index([isFeatured])
+  @@index([sortOrder])
+}
+
+model Product {
+  id              String            @id @default(cuid())
+  slug            String            @unique
+  name            String
+  shortDescription String           @default("")
+  description     String            @default("")
+  price           Int               @default(0)
+  compareAtPrice  Int?
+  currency        String            @default("INR")
+  sku             String            @default("")
+  inventory       Int               @default(0)
+  isPublished     Boolean           @default(true)
+  isFeatured      Boolean           @default(false)
+  isNewArrival    Boolean           @default(false)
+  isBestSeller    Boolean           @default(false)
+  isTrending      Boolean           @default(false)
+  isSustainable   Boolean           @default(false)
+  featuredImage   String            @default("")
+  videoUrl        String            @default("")
+  sizes           String            @default("")
+  colors          String            @default("")
+  metaTitle       String            @default("")
+  metaDescription String            @default("")
+  keywords        String            @default("")
+  ogImage         String            @default("")
+  categories      ProductCategory[]
+  images          ProductImage[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([isPublished])
+  @@index([isFeatured])
+  @@index([isNewArrival])
+  @@index([isBestSeller])
+  @@index([isTrending])
+  @@index([isSustainable])
+}
+
+model ProductCategory {
+  productId  String
+  categoryId String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+}
+
+model ProductImage {
+  id          String   @id @default(cuid())
+  productId   String
+  imageUrl    String
+  alt         String   @default("")
+  isFeatured  Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([productId])
+  @@index([sortOrder])
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  role      String   @default("")
+  quote     String
+  rating    Int      @default(5)
+  isEnabled Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isEnabled])
+  @@index([sortOrder])
+}
+
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

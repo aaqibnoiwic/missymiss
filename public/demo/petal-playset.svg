@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1500">
+  <defs>
+    <linearGradient id="a" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff8ef"/>
+      <stop offset="55%" stop-color="#f6ddb8"/>
+      <stop offset="100%" stop-color="#e7b9b7"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="1500" fill="url(#a)"/>
+  <path d="M320 350h560c90 0 162 72 162 162v286c0 90-72 162-162 162H320c-90 0-162-72-162-162V512c0-90 72-162 162-162Z" fill="#fff" fill-opacity=".58"/>
+  <circle cx="445" cy="650" r="88" fill="#f1c3cf"/>
+  <circle cx="755" cy="650" r="88" fill="#f1c3cf"/>
+  <text x="132" y="1186" fill="#7c5b56" font-family="Georgia, serif" font-size="104">Petal Playset</text>
+  <text x="140" y="1274" fill="#906d64" font-family="Arial, sans-serif" font-size="40" letter-spacing="8">BABY GIRLS</text>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1500">
+  <defs>
+    <linearGradient id="a" x1="10%" x2="90%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#f7f1e6"/>
+      <stop offset="55%" stop-color="#f4d58a"/>
+      <stop offset="100%" stop-color="#c89b3c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="1500" fill="url(#a)"/>
+  <rect x="190" y="220" width="820" height="910" rx="220" fill="#fff" fill-opacity=".46"/>
+  <path d="M355 345h496v640H355z" fill="#ffffff" fill-opacity=".54"/>
+  <path d="M600 346c36 62 54 124 54 186s-18 124-54 186c-36-62-54-124-54-186s18-124 54-186Z" fill="#d4af37" fill-opacity=".8"/>
+  <text x="118" y="1188" fill="#6c5520" font-family="Georgia, serif" font-size="108">Luna Kurta</text>
+  <text x="118" y="1278" fill="#7f6a39" font-family="Arial, sans-serif" font-size="42" letter-spacing="8">ETHNIC WEAR</text>
+</svg>
