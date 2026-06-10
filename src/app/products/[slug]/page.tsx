@@ -1,15 +1,19 @@
-import { Star } from "lucide-react";
+import { Leaf, Sparkles, Star } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductPurchasePanel } from "@/components/product-purchase-panel";
+import { ProductCard } from "@/components/product-card";
 import { prisma } from "@/lib/db";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ variant?: string }>;
 };
 
-export default async function ProductPage({ params }: PageProps) {
+export default async function ProductPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const { variant = "" } = await searchParams;
   const product = await prisma.product.findFirst({
     where: { slug, isPublished: true },
     include: {
@@ -24,6 +28,19 @@ export default async function ProductPage({ params }: PageProps) {
   });
 
   if (!product) notFound();
+  const relatedProducts = await prisma.product.findMany({
+    where: {
+      isPublished: true,
+      id: { not: product.id },
+      categories: { some: { categoryId: { in: product.categories.map((item) => item.categoryId) } } },
+    },
+    include: {
+      images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }] },
+      variants: { where: { isEnabled: true }, orderBy: { sortOrder: "asc" } },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 4,
+  });
 
   const images = [
     ...(product.featuredImage
@@ -52,6 +69,11 @@ export default async function ProductPage({ params }: PageProps) {
             {product.categories.map((item) => item.category.title).join(" / ") || "Missy Miss"}
           </p>
           <div>
+            <div className="mb-4 flex flex-wrap gap-2">
+              {product.isNewArrival ? <span className="rounded-full bg-[color:var(--color-paper)] px-3 py-1 text-xs font-bold uppercase tracking-wider"><Sparkles className="mr-1 inline size-3" />New arrival</span> : null}
+              {product.isBestSeller ? <span className="rounded-full bg-[color:var(--color-charcoal)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">Bestseller</span> : null}
+              {product.isSustainable ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-800"><Leaf className="mr-1 inline size-3" />Sustainable</span> : null}
+            </div>
             <h1 className="font-display text-5xl leading-none tracking-[-0.05em] text-[color:var(--color-charcoal)] md:text-6xl">
               {product.name}
             </h1>
@@ -67,7 +89,7 @@ export default async function ProductPage({ params }: PageProps) {
               <span>{averageRating.toFixed(1)} from {product.reviews.length} reviews</span>
             </div>
           ) : null}
-          <ProductPurchasePanel product={product} variants={product.variants} />
+          <ProductPurchasePanel initialVariantId={variant} product={product} variants={product.variants} />
           <div className="rounded-[2rem] border border-[color:var(--color-border)] bg-white/80 p-6">
             <p className="leading-8 text-[color:var(--color-muted-foreground)]">{product.description}</p>
           </div>
@@ -76,14 +98,15 @@ export default async function ProductPage({ params }: PageProps) {
 
       {details.length ? (
         <section className="mx-auto max-w-7xl px-6 pb-16 md:px-10 lg:px-16">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             {details.map(([title, value]) => (
-              <article className="rounded-[2rem] border border-[color:var(--color-border)] bg-white/82 p-6" key={title}>
-                <h2 className="font-display text-2xl">{title}</h2>
-                <p className="mt-3 whitespace-pre-line text-sm leading-7 text-[color:var(--color-muted-foreground)]">{value}</p>
-              </article>
+              <details className="group rounded-[2rem] border border-[color:var(--color-border)] bg-white/82 p-6 transition hover:border-[color:var(--color-gold-deep)]/40" key={title} open={title === "Highlights"}>
+                <summary className="cursor-pointer font-display text-2xl">{title}</summary>
+                <p className="mt-4 whitespace-pre-line text-sm leading-7 text-[color:var(--color-muted-foreground)]">{value}</p>
+              </details>
             ))}
           </div>
+          <div className="mt-5 flex flex-wrap gap-3 text-sm font-semibold"><Link className="rounded-full border bg-white px-4 py-2 transition hover:border-[color:var(--color-gold-deep)]" href="/shipping-and-returns">Shipping & returns policy</Link><Link className="rounded-full border bg-white px-4 py-2 transition hover:border-[color:var(--color-gold-deep)]" href="/faqs">Frequently asked questions</Link></div>
         </section>
       ) : null}
 
@@ -105,6 +128,7 @@ export default async function ProductPage({ params }: PageProps) {
           </div>
         </section>
       ) : null}
+      {relatedProducts.length ? <section className="mx-auto max-w-7xl px-6 py-16 md:px-10 lg:px-16"><p className="section-label">Complete the edit</p><h2 className="section-title">You may also love</h2><div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">{relatedProducts.map((related) => <ProductCard key={related.id} product={related} />)}</div></section> : null}
     </main>
   );
 }

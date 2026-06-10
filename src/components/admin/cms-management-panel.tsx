@@ -416,6 +416,7 @@ export function CmsManagementPanel({ data }: { data: CmsData }) {
           </div>
           <Field label="Eyebrow" name="eyebrow" />
           <TextArea label="Description" name="description" rows={4} />
+          <ImageUploadField folder="missy-miss/editorial" label="Category display image" name="imageUrl" />
           <SeoFields />
           <Check label="Published" name="isPublished" />
           <Button type="submit">Create Category</Button>
@@ -442,6 +443,7 @@ export function CmsManagementPanel({ data }: { data: CmsData }) {
               </div>
               <Field defaultValue={category.eyebrow} label="Eyebrow" name="eyebrow" />
               <TextArea defaultValue={category.description} label="Description" name="description" rows={4} />
+              <ImageUploadField defaultValue={category.imageUrl} folder="missy-miss/editorial" label="Category display image" name="imageUrl" />
               <SeoFields item={category} />
               <Check defaultChecked={category.isPublished} label="Published" name="isPublished" />
               <Button type="submit">Update Category</Button>
@@ -536,7 +538,7 @@ export function CmsManagementPanel({ data }: { data: CmsData }) {
           <div className="grid gap-4 md:grid-cols-4">
             <Field label="Slug" name="slug" />
             <Field label="Name" name="name" />
-            <Field label="Price in paise" name="price" type="number" />
+            <Field label="Price in rupees" name="price" type="number" />
             <Field label="Inventory" name="inventory" type="number" />
           </div>
           <TextArea label="Short description" name="shortDescription" rows={3} />
@@ -582,7 +584,7 @@ export function CmsManagementPanel({ data }: { data: CmsData }) {
               <div className="grid gap-4 md:grid-cols-4">
                 <Field defaultValue={product.slug} label="Slug" name="slug" />
                 <Field defaultValue={product.name} label="Name" name="name" />
-                <Field defaultValue={product.price} label="Price in paise" name="price" type="number" />
+                <Field defaultValue={product.price / 100} label="Price in rupees" name="price" type="number" />
                 <Field defaultValue={product.inventory} label="Inventory" name="inventory" type="number" />
               </div>
               <TextArea defaultValue={product.shortDescription} label="Short description" name="shortDescription" rows={3} />

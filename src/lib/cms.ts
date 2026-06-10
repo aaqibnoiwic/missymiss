@@ -40,6 +40,7 @@ export async function getPublishedCategory(slug: string) {
               images: {
                 orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }],
               },
+              variants: { where: { isEnabled: true }, orderBy: { sortOrder: "asc" } },
             },
           },
         },
@@ -68,13 +69,13 @@ export async function getHomeData() {
       }),
       prisma.product.findMany({
         where: { isPublished: true, isFeatured: true },
-        include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }] } },
+        include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }] }, variants: { where: { isEnabled: true }, orderBy: { sortOrder: "asc" } } },
         orderBy: { updatedAt: "desc" },
         take: 4,
       }),
       prisma.product.findMany({
         where: { isPublished: true, isNewArrival: true },
-        include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }] } },
+        include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }] }, variants: { where: { isEnabled: true }, orderBy: { sortOrder: "asc" } } },
         orderBy: { updatedAt: "desc" },
         take: 4,
       }),
@@ -88,14 +89,55 @@ export async function getHomeData() {
   return { banners, categories, featuredProducts, newArrivals, testimonials };
 }
 
-export async function getShopProducts() {
+export async function getShopProducts(options: {
+  q?: string;
+  category?: string;
+  size?: string;
+  color?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  availability?: string;
+  sort?: string;
+} = {}) {
+  const { q, category, size, color, minPrice, maxPrice, availability, sort } = options;
   return prisma.product.findMany({
-    where: { isPublished: true },
+    where: {
+      isPublished: true,
+      AND: [
+        ...(q ? [{ OR: [
+          { name: { contains: q, mode: "insensitive" as const } },
+          { shortDescription: { contains: q, mode: "insensitive" as const } },
+          { description: { contains: q, mode: "insensitive" as const } },
+          { sku: { contains: q, mode: "insensitive" as const } },
+          { categories: { some: { category: { title: { contains: q, mode: "insensitive" as const } } } } },
+        ] }] : []),
+        ...(category ? [{ categories: { some: { category: { slug: category } } } }] : []),
+        ...(size ? [{ OR: [{ sizes: { contains: size, mode: "insensitive" as const } }, { variants: { some: { size: { equals: size, mode: "insensitive" as const }, isEnabled: true } } }] }] : []),
+        ...(color ? [{ OR: [{ colors: { contains: color, mode: "insensitive" as const } }, { variants: { some: { color: { equals: color, mode: "insensitive" as const }, isEnabled: true } } }] }] : []),
+        ...((minPrice !== undefined || maxPrice !== undefined) ? [{ price: { ...(minPrice !== undefined ? { gte: minPrice } : {}), ...(maxPrice !== undefined ? { lte: maxPrice } : {}) } }] : []),
+        ...(availability === "in-stock" ? [{ OR: [{ inventory: { gt: 0 } }, { variants: { some: { inventory: { gt: 0 }, isEnabled: true } } }] }] : []),
+      ],
+    },
     include: {
       categories: { include: { category: true } },
       images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }] },
+      variants: { where: { isEnabled: true }, orderBy: { sortOrder: "asc" } },
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: sort === "price-asc" ? { price: "asc" } : sort === "price-desc" ? { price: "desc" } : sort === "name" ? { name: "asc" } : { updatedAt: "desc" },
+  });
+}
+
+export async function getShopFilterOptions() {
+  return prisma.product.findMany({
+    where: { isPublished: true },
+    select: {
+      colors: true,
+      sizes: true,
+      variants: {
+        where: { isEnabled: true },
+        select: { color: true, size: true },
+      },
+    },
   });
 }
 

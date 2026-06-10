@@ -17,6 +17,18 @@ export type MediaAsset = {
   createdAt: string;
 };
 
+export type MediaUploadError = {
+  fileName: string;
+  error: string;
+};
+
+export type BatchMediaResponse = {
+  assets: MediaAsset[];
+  errors: MediaUploadError[];
+  asset?: MediaAsset;
+  error?: string;
+};
+
 export type BrandAsset = {
   logoFull: string;
   logoSymbol: string;

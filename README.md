@@ -51,6 +51,22 @@ cp .env.example .env.local
 npm run dev
 ```
 
+Development output is written to `.next-dev`, while production build/start uses
+`.next`. This makes it safe to run `npm run build` while the development server
+is open without corrupting generated chunks.
+
+If generated files ever become stale, use the safe restart command:
+
+```bash
+npm run restart:dev
+```
+
+To remove both generated output directories without starting the app:
+
+```bash
+npm run clean
+```
+
 Useful database commands:
 
 ```bash
@@ -64,8 +80,8 @@ npm run db:seed
 - `/admin/login` minimal admin sign-in
 - `/cart` persistent guest shopping bag and Shiprocket Checkout handoff
 - `/admin` protected commerce dashboard
-- `/admin/products` product details, variants, inventory, dimensions, and images
-- `/admin/orders` order approval, courier selection, AWB, pickup, and tracking status
+- `/admin/products` compact product list with dedicated product editors
+- `/admin/orders` compact order list; fulfillment data loads on individual orders
 - `/admin/reviews` admin-managed product reviews
 - `/admin/banners` responsive homepage banner management
 - `/admin/content` pages, collections, gallery, testimonials, and SEO

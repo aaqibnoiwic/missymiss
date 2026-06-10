@@ -1,65 +1,72 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import type { Product, ProductImage } from "@prisma/client";
-import { buttonVariants } from "@/components/ui/button";
+import type { Product, ProductImage, ProductVariant } from "@prisma/client";
+import { Check, ShoppingBag, Zap } from "lucide-react";
+import { useState } from "react";
+import { useCart } from "@/components/cart-provider";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 
 type ProductCardProps = {
-  product: Product & {
-    images?: ProductImage[];
-  };
+  product: Product & { images?: ProductImage[]; variants?: ProductVariant[] };
 };
 
-function formatPrice(price: number, currency: string) {
-  return new Intl.NumberFormat("en-IN", {
-    currency,
-    style: "currency",
-  }).format(price / 100);
+function money(price: number, currency = "INR") {
+  return new Intl.NumberFormat("en-IN", { currency, style: "currency" }).format(price / 100);
 }
 
 export function ProductCard({ product }: ProductCardProps) {
   const image = product.featuredImage || product.images?.[0]?.imageUrl;
+  const available = product.variants?.filter((variant) => variant.isEnabled) ?? [];
+  const [variantId, setVariantId] = useState("");
+  const [added, setAdded] = useState(false);
+  const { addItem } = useCart();
+  const selected = available.find((variant) => variant.id === variantId);
+  const inventory = selected?.inventory ?? product.inventory;
+  const price = selected?.price ?? product.price;
+  const canAdd = available.length ? Boolean(selected && selected.inventory > 0) : product.inventory > 0;
+
+  function add() {
+    if (!canAdd) return;
+    addItem({
+      lineId: selected?.id ?? `product:${product.id}`,
+      variantId: selected?.id,
+      productId: product.id,
+      slug: product.slug,
+      name: product.name,
+      variantName: selected?.title || [selected?.color, selected?.size].filter(Boolean).join(" / ") || "Standard",
+      sku: selected?.sku || product.sku,
+      imageUrl: image ?? "",
+      price,
+      quantity: 1,
+      inventory,
+    });
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 1400);
+  }
 
   return (
-    <article className="overflow-hidden rounded-[2rem] border border-[color:var(--color-border)] bg-white/85 shadow-[0_20px_60px_rgba(116,94,56,0.08)]">
-      <div className="relative h-72 bg-[linear-gradient(160deg,rgba(212,175,55,0.18),rgba(255,255,255,0.5),rgba(245,241,234,0.95))]">
-        {image ? (
-          <Image
-            alt={product.name}
-            className="object-cover"
-            fill
-            sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
-            src={image}
-          />
-        ) : (
-          <div className="flex h-full items-end p-6">
-            <div className="w-full rounded-[1.5rem] border border-white/60 bg-white/20 p-4 backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[color:var(--color-charcoal)]/70">
-                Missy Miss
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="space-y-3 p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="font-display text-2xl text-[color:var(--color-charcoal)]">
-              {product.name}
-            </h3>
-            <p className="mt-1 text-sm leading-6 text-[color:var(--color-muted-foreground)]">
-              {product.shortDescription}
-            </p>
-          </div>
-          <span className="rounded-full bg-[color:var(--color-paper)] px-3 py-1 text-sm font-semibold text-[color:var(--color-charcoal)]">
-            {formatPrice(product.price, product.currency)}
-          </span>
+    <article className="group overflow-hidden rounded-[2rem] border border-[color:var(--color-border)] bg-white/88 shadow-[0_16px_45px_rgba(116,94,56,0.07)] transition duration-300 hover:-translate-y-1 hover:border-[color:var(--color-gold-deep)]/40 hover:shadow-[0_26px_70px_rgba(116,94,56,0.16)] focus-within:border-[color:var(--color-gold-deep)]">
+      <Link className="relative block h-72 overflow-hidden bg-[color:var(--color-paper)]" href={`/products/${product.slug}${selected ? `?variant=${selected.id}` : ""}`}>
+        {image ? <Image alt={product.name} className="object-cover transition-transform duration-700 group-hover:scale-105" fill sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw" src={image} /> : <div className="hero-mesh h-full" />}
+        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+          {product.isNewArrival ? <span className="rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-wider">New</span> : null}
+          {product.isBestSeller ? <span className="rounded-full bg-[color:var(--color-charcoal)] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">Bestseller</span> : null}
         </div>
-        <Link
-          className={buttonVariants({ variant: "ghost", className: "px-0" })}
-          href={`/products/${product.slug}`}
-        >
-          View Details
-        </Link>
+      </Link>
+      <div className="space-y-4 p-5">
+        <div>
+          <Link className="outline-none hover:text-[color:var(--color-gold-deep)] focus-visible:text-[color:var(--color-gold-deep)]" href={`/products/${product.slug}`}><h3 className="font-display text-2xl">{product.name}</h3></Link>
+          <p className="mt-1 line-clamp-2 text-sm leading-6 text-[color:var(--color-muted-foreground)]">{product.shortDescription}</p>
+          <div className="mt-3 flex items-center gap-2"><strong>{money(price, product.currency)}</strong>{product.compareAtPrice && product.compareAtPrice > price ? <span className="text-sm text-[color:var(--color-muted-foreground)] line-through">{money(product.compareAtPrice, product.currency)}</span> : null}</div>
+        </div>
+        {available.length ? <select aria-label={`Choose option for ${product.name}`} className="h-10 w-full rounded-xl border border-[color:var(--color-border-strong)] bg-white px-3 text-sm outline-none focus:border-[color:var(--color-gold-deep)]" onChange={(event) => setVariantId(event.target.value)} value={variantId}><option value="">Choose size / color</option>{available.map((variant) => <option disabled={variant.inventory < 1} key={variant.id} value={variant.id}>{variant.title || [variant.color, variant.size].filter(Boolean).join(" / ")}{variant.inventory < 1 ? " - Sold out" : ""}</option>)}</select> : null}
+        <div className="grid grid-cols-2 gap-2">
+          <Button disabled={!canAdd} onClick={add} size="sm" type="button" variant="outline">{added ? <Check className="size-4" /> : <ShoppingBag className="size-4" />}{added ? "Added" : "Add to cart"}</Button>
+          <Link className={buttonVariants({ size: "sm", className: !canAdd ? "pointer-events-none opacity-50" : "" })} href={`/products/${product.slug}${selected ? `?variant=${selected.id}` : ""}`}><Zap className="size-4" />Buy now</Link>
+        </div>
       </div>
     </article>
   );

@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth";
+import type { AdminActionState } from "@/lib/admin-ui";
 import {
   assignAwb,
   cancelShiprocketOrder,
@@ -39,6 +40,181 @@ function refreshCms() {
   revalidatePath("/shop");
   revalidatePath("/[slug]", "page");
   revalidatePath("/collections/[slug]", "page");
+}
+
+type ProductEditorVariant = {
+  title?: string;
+  sku?: string;
+  size?: string;
+  color?: string;
+  price?: number;
+  inventory?: number;
+  weight?: number;
+  length?: number;
+  breadth?: number;
+  height?: number;
+  isEnabled?: boolean;
+};
+
+function moneyFromRupees(value: FormDataEntryValue | null) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? Math.round(amount * 100) : -1;
+}
+
+function parseVariants(value: string): ProductEditorVariant[] {
+  if (!value) return [];
+  const parsed = JSON.parse(value) as unknown;
+  if (!Array.isArray(parsed)) throw new Error("Variants must be a list.");
+  return parsed as ProductEditorVariant[];
+}
+
+export async function saveProductEditor(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  await requireAdmin();
+  const id = text(formData, "id");
+  const name = text(formData, "name");
+  const slug = text(formData, "slug");
+  const price = moneyFromRupees(formData.get("price"));
+  const inventory = int(formData, "inventory");
+  const categoryIds = [...new Set(formData.getAll("categoryIds").map(String).filter(Boolean))];
+  const galleryImageUrls = [
+    ...new Set(formData.getAll("galleryImageUrls").map(String).map((url) => url.trim()).filter(Boolean)),
+  ];
+  const fieldErrors: Record<string, string> = {};
+
+  if (!name) fieldErrors.name = "Enter a product name.";
+  if (!slug) fieldErrors.slug = "Enter a product slug.";
+  if (price < 0) fieldErrors.price = "Enter a valid price in rupees.";
+  if (inventory < 0) fieldErrors.inventory = "Stock cannot be negative.";
+
+  let variants: ProductEditorVariant[] = [];
+  try {
+    variants = parseVariants(text(formData, "variantsJson"));
+  } catch {
+    fieldErrors.variants = "Variant information is invalid.";
+  }
+  const duplicateSku = variants.find(
+    (variant, index) =>
+      variant.sku &&
+      variants.findIndex((candidate) => candidate.sku === variant.sku) !== index,
+  );
+  if (variants.some((variant) => !String(variant.sku ?? "").trim())) {
+    fieldErrors.variants = "Every variant needs a unique SKU.";
+  }
+  if (duplicateSku) fieldErrors.variants = `SKU ${duplicateSku.sku} is repeated.`;
+  if (Object.keys(fieldErrors).length) {
+    return { success: false, message: "", fieldErrors, formError: "" };
+  }
+
+  const data = {
+    slug,
+    name,
+    shortDescription: text(formData, "shortDescription"),
+    description: text(formData, "description"),
+    highlights: text(formData, "highlights"),
+    material: text(formData, "material"),
+    fitDetails: text(formData, "fitDetails"),
+    careInstructions: text(formData, "careInstructions"),
+    sizeGuide: text(formData, "sizeGuide"),
+    shippingReturns: text(formData, "shippingReturns"),
+    price,
+    compareAtPrice: text(formData, "compareAtPrice")
+      ? moneyFromRupees(formData.get("compareAtPrice"))
+      : null,
+    sku: text(formData, "sku"),
+    inventory,
+    isPublished: bool(formData, "isPublished"),
+    isFeatured: bool(formData, "isFeatured"),
+    isNewArrival: bool(formData, "isNewArrival"),
+    isBestSeller: bool(formData, "isBestSeller"),
+    isTrending: bool(formData, "isTrending"),
+    isSustainable: bool(formData, "isSustainable"),
+    featuredImage: galleryImageUrls[0] ?? "",
+    videoUrl: text(formData, "videoUrl"),
+    sizes: text(formData, "sizes"),
+    colors: text(formData, "colors"),
+    metaTitle: text(formData, "metaTitle"),
+    metaDescription: text(formData, "metaDescription"),
+    keywords: text(formData, "keywords"),
+    ogImage: text(formData, "ogImage"),
+  };
+
+  try {
+    const product = await prisma.$transaction(async (transaction) => {
+      const saved = id
+        ? await transaction.product.update({ where: { id }, data })
+        : await transaction.product.create({ data });
+
+      await transaction.productCategory.deleteMany({ where: { productId: saved.id } });
+      if (categoryIds.length) {
+        await transaction.productCategory.createMany({
+          data: categoryIds.map((categoryId) => ({ productId: saved.id, categoryId })),
+          skipDuplicates: true,
+        });
+      }
+
+      await transaction.productImage.deleteMany({ where: { productId: saved.id } });
+      if (galleryImageUrls.length) {
+        await transaction.productImage.createMany({
+          data: galleryImageUrls.map((imageUrl, sortOrder) => ({
+            productId: saved.id,
+            imageUrl,
+            alt: name,
+            isFeatured: sortOrder === 0,
+            sortOrder,
+          })),
+        });
+      }
+
+      await transaction.productVariant.deleteMany({ where: { productId: saved.id } });
+      if (variants.length) {
+        await transaction.productVariant.createMany({
+          data: variants.map((variant, sortOrder) => ({
+            productId: saved.id,
+            sku: String(variant.sku ?? "").trim(),
+            title: String(variant.title ?? "").trim(),
+            size: String(variant.size ?? "").trim(),
+            color: String(variant.color ?? "").trim(),
+            price: Math.round(Number(variant.price ?? 0) * 100),
+            inventory: Math.max(0, Number(variant.inventory ?? 0)),
+            weight: Math.max(0, Number(variant.weight ?? 0)),
+            length: Math.max(0, Number(variant.length ?? 0)),
+            breadth: Math.max(0, Number(variant.breadth ?? 0)),
+            height: Math.max(0, Number(variant.height ?? 0)),
+            isEnabled: variant.isEnabled !== false,
+            sortOrder,
+          })),
+        });
+      }
+      return saved;
+    });
+
+    refreshCms();
+    revalidatePath("/admin/products");
+    revalidatePath(`/admin/products/${product.id}`);
+    return {
+      success: true,
+      message: id ? "Product updated successfully." : "Product created successfully.",
+      fieldErrors: {},
+      formError: "",
+      entityId: product.id,
+    };
+  } catch (error) {
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String(error.code)
+        : "";
+    return {
+      success: false,
+      message: "",
+      fieldErrors: code === "P2002" ? { slug: "This slug or variant SKU is already in use." } : {},
+      formError: code === "P2002"
+        ? "Please choose a unique slug and unique variant SKUs."
+        : "The product could not be saved. Your entered details are still here; please try again.",
+    };
+  }
 }
 
 export async function savePage(formData: FormData) {
@@ -87,6 +263,7 @@ export async function saveCategory(formData: FormData) {
     description: text(formData, "description"),
     collectionType: text(formData, "collectionType") || "main",
     ageRange: text(formData, "ageRange"),
+    imageUrl: text(formData, "imageUrl"),
     isPublished: bool(formData, "isPublished"),
     sortOrder: int(formData, "sortOrder"),
     metaTitle: text(formData, "metaTitle"),
@@ -198,9 +375,9 @@ export async function saveProduct(formData: FormData) {
     careInstructions: text(formData, "careInstructions"),
     sizeGuide: text(formData, "sizeGuide"),
     shippingReturns: text(formData, "shippingReturns"),
-    price: int(formData, "price"),
+    price: moneyFromRupees(formData.get("price")),
     compareAtPrice: text(formData, "compareAtPrice")
-      ? int(formData, "compareAtPrice")
+      ? moneyFromRupees(formData.get("compareAtPrice"))
       : null,
     sku: text(formData, "sku"),
     inventory: int(formData, "inventory"),
@@ -220,7 +397,7 @@ export async function saveProduct(formData: FormData) {
     ogImage: text(formData, "ogImage"),
   };
 
-  if (!data.slug || !data.name) return;
+  if (!data.slug || !data.name || data.price < 0 || (data.compareAtPrice !== null && data.compareAtPrice < 0)) return;
 
   const product = id
     ? await prisma.product.update({ where: { id }, data })
@@ -310,7 +487,7 @@ export async function saveProductVariant(formData: FormData) {
     title: text(formData, "title"),
     size: text(formData, "size"),
     color: text(formData, "color"),
-    price: int(formData, "price"),
+    price: moneyFromRupees(formData.get("price")),
     inventory: int(formData, "inventory"),
     weight: int(formData, "weight"),
     length: int(formData, "length"),
@@ -319,7 +496,7 @@ export async function saveProductVariant(formData: FormData) {
     isEnabled: bool(formData, "isEnabled"),
     sortOrder: int(formData, "sortOrder"),
   };
-  if (!productId || !data.sku) return;
+  if (!productId || !data.sku || data.price < 0) return;
   if (id) await prisma.productVariant.update({ where: { id }, data });
   else await prisma.productVariant.create({ data });
   refreshCms();

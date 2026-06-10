@@ -1,11 +1,7 @@
+import Image from "next/image";
+import { AdminListToolbar, AdminPagination } from "@/components/admin/admin-list";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { MediaUploadPanel } from "@/components/admin/media-upload-panel";
 import { requireAdmin } from "@/lib/admin-auth";
-import { isCloudinaryConfigured } from "@/lib/cloudinary";
-import { listMediaAssets } from "@/lib/media-assets";
-
-export default async function AdminMediaPage() {
-  await requireAdmin();
-  const enabled = isCloudinaryConfigured();
-  return <AdminShell eyebrow="Asset library" title="Media uploads"><MediaUploadPanel initialAssets={await listMediaAssets().catch(() => [])} storageEnabled={enabled} /></AdminShell>;
-}
+import { ADMIN_PAGE_SIZE, readPage, readQuery } from "@/lib/admin-ui";
+import { prisma } from "@/lib/db";
+export default async function AdminMediaPage({ searchParams }: { searchParams: Promise<{ page?: string; q?: string }> }) { await requireAdmin(); const filters = await searchParams; const page = readPage(filters.page), query = readQuery(filters.q); const where = query ? { OR: [{ alt: { contains: query, mode: "insensitive" as const } }, { publicId: { contains: query, mode: "insensitive" as const } }] } : {}; const [assets, total] = await Promise.all([prisma.mediaAsset.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * ADMIN_PAGE_SIZE, take: ADMIN_PAGE_SIZE }), prisma.mediaAsset.count({ where })]); return <AdminShell eyebrow="Asset library" title="Media"><AdminListToolbar actionHref="/admin/media/manage" actionLabel="Upload and manage media" query={query} /><div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">{assets.map((asset) => <article className="overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-white/85 p-2" key={asset.id}><div className="relative aspect-square overflow-hidden rounded-xl bg-[color:var(--color-paper)]"><Image alt={asset.alt || asset.publicId} className="object-cover" fill sizes="240px" src={asset.url} /></div><p className="mt-2 truncate text-xs font-semibold">{asset.alt || asset.publicId}</p><p className="truncate text-[10px] text-[color:var(--color-muted-foreground)]">{asset.folder}</p></article>)}</div>{!assets.length ? <p className="rounded-2xl border border-dashed p-10 text-center text-sm">No matching media found.</p> : null}<AdminPagination page={page} query={query} total={total} /></AdminShell>; }

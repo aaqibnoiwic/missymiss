@@ -52,6 +52,7 @@ model Category {
   description     String            @default("")
   collectionType  String            @default("main")
   ageRange        String            @default("")
+  imageUrl        String            @default("")
   isPublished     Boolean           @default(true)
   sortOrder       Int               @default(0)
   metaTitle       String            @default("")

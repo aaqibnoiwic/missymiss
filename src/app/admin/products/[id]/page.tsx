@@ -1,0 +1,22 @@
+import { notFound } from "next/navigation";
+import { AdminShell } from "@/components/admin/admin-shell";
+import { ProductEditor } from "@/components/admin/product-editor";
+import { requireAdmin } from "@/lib/admin-auth";
+import { prisma } from "@/lib/db";
+
+export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
+  const { id } = await params;
+  const [categories, product] = await Promise.all([
+    prisma.category.findMany({ select: { id: true, title: true, collectionType: true }, orderBy: [{ collectionType: "asc" }, { sortOrder: "asc" }, { title: "asc" }] }),
+    prisma.product.findUnique({ where: { id }, include: { categories: true, images: { orderBy: { sortOrder: "asc" } }, variants: { orderBy: { sortOrder: "asc" } } } }),
+  ]);
+  if (!product) notFound();
+  const editorProduct = {
+    ...product,
+    categoryIds: product.categories.map((item) => item.categoryId),
+    imageUrls: [...new Set([product.featuredImage, ...product.images.map((image) => image.imageUrl)].filter(Boolean))],
+    variants: product.variants.map((variant) => ({ ...variant, price: variant.price / 100 })),
+  };
+  return <AdminShell eyebrow="Catalog" title={`Edit ${product.name}`}><ProductEditor categories={categories} product={editorProduct} /></AdminShell>;
+}

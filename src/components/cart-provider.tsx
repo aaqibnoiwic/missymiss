@@ -3,7 +3,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 export type CartItem = {
-  variantId: string;
+  lineId: string;
+  variantId?: string;
   productId: string;
   slug: string;
   name: string;
@@ -18,8 +19,8 @@ export type CartItem = {
 type CartContextValue = {
   items: CartItem[];
   addItem: (item: CartItem) => void;
-  removeItem: (variantId: string) => void;
-  setQuantity: (variantId: string, quantity: number) => void;
+  removeItem: (lineId: string) => void;
+  setQuantity: (lineId: string, quantity: number) => void;
   clear: () => void;
   count: number;
 };
@@ -39,8 +40,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(CART_KEY) ?? "[]") as CartItem[];
-      setItems(saved);
+      const saved = JSON.parse(localStorage.getItem(CART_KEY) ?? "[]") as Array<CartItem & { variantId?: string }>;
+      setItems(saved.map((item) => ({ ...item, lineId: item.lineId || item.variantId || `product:${item.productId}` })));
     } catch {
       localStorage.removeItem(CART_KEY);
     }
@@ -52,21 +53,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   function addItem(item: CartItem) {
     setItems((current) => {
-      const existing = current.find((entry) => entry.variantId === item.variantId);
+      const existing = current.find((entry) => entry.lineId === item.lineId);
       if (!existing) return [...current, item];
       return current.map((entry) =>
-        entry.variantId === item.variantId
+        entry.lineId === item.lineId
           ? { ...entry, quantity: Math.min(entry.quantity + item.quantity, item.inventory) }
           : entry,
       );
     });
   }
 
-  function setQuantity(variantId: string, quantity: number) {
+  function setQuantity(lineId: string, quantity: number) {
     setItems((current) =>
       current
         .map((item) =>
-          item.variantId === variantId
+          item.lineId === lineId
             ? { ...item, quantity: Math.max(0, Math.min(quantity, item.inventory)) }
             : item,
         )
@@ -79,8 +80,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       value={{
         items,
         addItem,
-        removeItem: (variantId) =>
-          setItems((current) => current.filter((item) => item.variantId !== variantId)),
+        removeItem: (lineId) =>
+          setItems((current) => current.filter((item) => item.lineId !== lineId)),
         setQuantity,
         clear: () => setItems([]),
         count: items.reduce((sum, item) => sum + item.quantity, 0),

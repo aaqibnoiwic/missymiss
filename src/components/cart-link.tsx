@@ -9,7 +9,7 @@ export function CartLink() {
   return (
     <Link
       aria-label={`Shopping bag with ${count} items`}
-      className="relative flex size-11 items-center justify-center rounded-full border border-[color:var(--color-border-strong)] bg-white/80"
+      className="relative flex size-11 items-center justify-center rounded-full border border-[color:var(--color-border-strong)] bg-white/80 transition hover:border-[color:var(--color-gold-deep)] hover:bg-[color:var(--color-paper)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-gold-deep)]"
       href="/cart"
     >
       <ShoppingBag className="size-4" />

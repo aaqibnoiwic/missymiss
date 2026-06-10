@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/components/cart-provider";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 
 function money(price: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(price / 100);
@@ -23,7 +24,7 @@ export default function CartPage() {
     const response = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: items.map(({ variantId, quantity }) => ({ variantId, quantity })) }),
+      body: JSON.stringify({ items: items.map(({ productId, variantId, quantity }) => ({ productId, variantId, quantity })) }),
     });
     const payload = (await response.json()) as { checkoutUrl?: string; error?: string };
     if (!response.ok || !payload.checkoutUrl) {
@@ -47,7 +48,7 @@ export default function CartPage() {
         <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_22rem]">
           <div className="space-y-4">
             {items.map((item) => (
-              <article className="grid grid-cols-[6rem_1fr] gap-5 rounded-[2rem] border border-[color:var(--color-border)] bg-white/85 p-4 sm:grid-cols-[7rem_1fr_auto]" key={item.variantId}>
+              <article className="grid grid-cols-[6rem_1fr] gap-5 rounded-[2rem] border border-[color:var(--color-border)] bg-white/85 p-4 sm:grid-cols-[7rem_1fr_auto]" key={item.lineId}>
                 <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-[color:var(--color-paper)]">
                   {item.imageUrl ? <Image alt={item.name} className="object-cover" fill src={item.imageUrl} /> : null}
                 </div>
@@ -56,12 +57,12 @@ export default function CartPage() {
                   <p className="text-sm text-[color:var(--color-muted-foreground)]">{item.variantName}</p>
                   <p className="font-semibold">{money(item.price)}</p>
                   <div className="flex items-center gap-2 pt-2">
-                    <button className="flex size-8 items-center justify-center rounded-full border" onClick={() => setQuantity(item.variantId, item.quantity - 1)}><Minus className="size-3" /></button>
+                    <button className="flex size-8 items-center justify-center rounded-full border" onClick={() => setQuantity(item.lineId, item.quantity - 1)}><Minus className="size-3" /></button>
                     <span className="min-w-6 text-center text-sm font-semibold">{item.quantity}</span>
-                    <button className="flex size-8 items-center justify-center rounded-full border" onClick={() => setQuantity(item.variantId, item.quantity + 1)}><Plus className="size-3" /></button>
+                    <button className="flex size-8 items-center justify-center rounded-full border" onClick={() => setQuantity(item.lineId, item.quantity + 1)}><Plus className="size-3" /></button>
                   </div>
                 </div>
-                <button aria-label={`Remove ${item.name}`} className="col-start-2 flex size-9 items-center justify-center justify-self-end rounded-full text-[color:var(--color-muted-foreground)] sm:col-start-3" onClick={() => removeItem(item.variantId)}><Trash2 className="size-4" /></button>
+                <button aria-label={`Remove ${item.name}`} className="col-start-2 flex size-9 items-center justify-center justify-self-end rounded-full text-[color:var(--color-muted-foreground)] sm:col-start-3" onClick={() => removeItem(item.lineId)}><Trash2 className="size-4" /></button>
               </article>
             ))}
           </div>

@@ -82,7 +82,7 @@ export async function POST(request: Request) {
         items: {
           create: (order.items ?? []).map((item) => ({
             productId: item.product_id || null,
-            variantId: item.id || null,
+            variantId: item.id && item.id !== item.product_id ? item.id : null,
             productName: item.name ?? "Product",
             variantName: item.variant ?? "",
             sku: item.sku ?? "",

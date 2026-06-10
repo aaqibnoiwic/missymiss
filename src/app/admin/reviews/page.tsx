@@ -1,13 +1,9 @@
+import Link from "next/link";
+import type { Prisma } from "@prisma/client";
+import { AdminList, AdminListRow, AdminListToolbar, AdminPagination } from "@/components/admin/admin-list";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { ReviewsManager } from "@/components/admin/commerce-managers";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { requireAdmin } from "@/lib/admin-auth";
+import { ADMIN_PAGE_SIZE, readPage, readQuery } from "@/lib/admin-ui";
 import { prisma } from "@/lib/db";
-
-export default async function AdminReviewsPage() {
-  await requireAdmin();
-  const [products, reviews] = await Promise.all([
-    prisma.product.findMany({ orderBy: { name: "asc" } }),
-    prisma.productReview.findMany({ include: { product: true }, orderBy: [{ isFeatured: "desc" }, { updatedAt: "desc" }] }),
-  ]);
-  return <AdminShell eyebrow="Social proof" title="Product reviews"><ReviewsManager products={products} reviews={reviews} /></AdminShell>;
-}
+export default async function AdminReviewsPage({ searchParams }: { searchParams: Promise<{ page?: string; q?: string; status?: string }> }) { await requireAdmin(); const filters = await searchParams; const page = readPage(filters.page), query = readQuery(filters.q), status = readQuery(filters.status); const where: Prisma.ProductReviewWhereInput = { ...(query ? { OR: [{ authorName: { contains: query, mode: "insensitive" } }, { product: { name: { contains: query, mode: "insensitive" } } }] } : {}), ...(status === "published" ? { isPublished: true } : status === "draft" ? { isPublished: false } : {}) }; const [reviews, total] = await Promise.all([prisma.productReview.findMany({ where, select: { id: true, authorName: true, rating: true, title: true, isPublished: true, product: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, skip: (page - 1) * ADMIN_PAGE_SIZE, take: ADMIN_PAGE_SIZE }), prisma.productReview.count({ where })]); return <AdminShell eyebrow="Social proof" title="Reviews"><AdminListToolbar actionHref="/admin/reviews/new" actionLabel="Add review" query={query} status={status} statuses={[{ label: "Published", value: "published" }, { label: "Draft", value: "draft" }]} /><AdminList empty={!reviews.length}>{reviews.map((review) => <AdminListRow actions={<Link className={buttonVariants({ variant: "outline", size: "sm" })} href={`/admin/reviews/${review.id}`}>Edit</Link>} key={review.id}><div><h2 className="font-semibold">{review.product.name} · {review.authorName}</h2><p className="mt-1 text-sm text-[color:var(--color-muted-foreground)]">{review.rating}/5 · {review.isPublished ? "Published" : "Draft"} · {review.title || "Untitled review"}</p></div></AdminListRow>)}</AdminList><AdminPagination page={page} query={query} status={status} total={total} /></AdminShell>; }

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
+import { getCategoryImage } from "@/lib/category-images";
 import { getEnabledBanners, getPublishedCategory } from "@/lib/cms";
 
 type PageProps = {
@@ -34,6 +36,7 @@ export default async function CategoryPage({ params }: PageProps) {
 
   const banners = await getEnabledBanners("category", category.slug);
   const hero = banners[0];
+  const categoryImage = category.imageUrl || getCategoryImage(category.slug, category.title);
   const products = category.products
     .map((item) => item.product)
     .filter((product) => product.isPublished);
@@ -41,16 +44,16 @@ export default async function CategoryPage({ params }: PageProps) {
   return (
     <main>
       <section className="relative overflow-hidden border-b border-[color:var(--color-border)]">
-        <div className="absolute inset-0 hero-mesh opacity-80" />
+        {categoryImage ? <><Image alt="" className="object-cover" fill priority sizes="100vw" src={categoryImage} /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,20,20,.82),rgba(20,20,20,.25))]" /></> : <div className="absolute inset-0 hero-mesh opacity-80" />}
         <div className="relative mx-auto grid max-w-7xl gap-10 px-6 py-20 md:px-10 lg:grid-cols-[1fr_.8fr] lg:items-center lg:px-16">
-          <div>
+          <div className={categoryImage ? "text-white" : ""}>
             <p className="section-label">
               {category.eyebrow || category.collectionType}
             </p>
-            <h1 className="mt-4 font-display text-5xl leading-none tracking-[-0.05em] text-[color:var(--color-charcoal)] md:text-6xl">
+            <h1 className={`mt-4 font-display text-5xl leading-none tracking-[-0.05em] md:text-6xl ${categoryImage ? "text-white" : "text-[color:var(--color-charcoal)]"}`}>
               {hero?.title || category.title}
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-[color:var(--color-muted-foreground)]">
+            <p className={`mt-6 max-w-2xl text-lg leading-8 ${categoryImage ? "text-white/75" : "text-[color:var(--color-muted-foreground)]"}`}>
               {hero?.subtitle || category.description}
             </p>
             {hero?.ctaHref ? (
@@ -64,8 +67,8 @@ export default async function CategoryPage({ params }: PageProps) {
               {products.length} curated styles
             </p>
             <p className="mt-3 text-sm leading-7 text-[color:var(--color-muted-foreground)]">
-              Products, banners, gallery imagery, SEO, and descriptions are all
-              managed from the admin panel.
+              Thoughtfully selected silhouettes made for effortless,
+              confident dressing.
             </p>
           </div>
         </div>
