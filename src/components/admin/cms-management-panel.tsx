@@ -532,6 +532,7 @@ export function CmsManagementPanel({ data }: { data: CmsData }) {
 
       <Panel id="cms-products" kicker="Catalog" title="Products, Inventory & Variants">
         <form action={saveProduct} className="grid gap-4 rounded-3xl border border-[color:var(--color-border)] bg-[color:var(--color-paper)]/50 p-5">
+          <input name="manageCategories" type="hidden" value="true" />
           <div className="grid gap-4 md:grid-cols-4">
             <Field label="Slug" name="slug" />
             <Field label="Name" name="name" />
@@ -577,6 +578,7 @@ export function CmsManagementPanel({ data }: { data: CmsData }) {
             <summary className="cursor-pointer font-semibold">{product.name}</summary>
             <form action={saveProduct} className="mt-5 grid gap-4">
               <input name="id" type="hidden" value={product.id} />
+              <input name="manageCategories" type="hidden" value="true" />
               <div className="grid gap-4 md:grid-cols-4">
                 <Field defaultValue={product.slug} label="Slug" name="slug" />
                 <Field defaultValue={product.name} label="Name" name="name" />

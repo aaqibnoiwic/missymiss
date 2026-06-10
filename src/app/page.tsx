@@ -1,6 +1,8 @@
-import { ArrowRight, Leaf, Sparkles, Star } from "lucide-react";
+import { ArrowRight, Leaf, Star } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
+import { HeroCarousel } from "@/components/hero-carousel";
 import { ProductCard } from "@/components/product-card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getHomeData } from "@/lib/cms";
@@ -8,112 +10,11 @@ import { getHomeData } from "@/lib/cms";
 export default async function Home() {
   const { banners, categories, featuredProducts, newArrivals, testimonials } =
     await getHomeData();
-  const hero = banners[0];
-  const shopKidsCategory = categories.find(
-    (category) => category.collectionType === "baby-girls",
-  );
-  const reclaimedCategory = categories.find(
-    (category) => category.collectionType === "reclaimed-thread",
-  );
-  const heroCtaHref = hero?.ctaHref || "/shop";
-  const shopKidsHref = shopKidsCategory
-    ? `/collections/${shopKidsCategory.slug}`
-    : "/shop";
-  const reclaimedHref = reclaimedCategory
-    ? `/collections/${reclaimedCategory.slug}`
-    : "/reclaimed-thread";
-
+  const heroBanners = banners.filter((banner) => banner.placement === "hero");
+  const promoBanners = banners.filter((banner) => banner.placement !== "hero");
   return (
     <main className="overflow-hidden">
-      <section className="relative border-b border-[color:var(--color-border)]">
-        <div className="absolute inset-0 hero-mesh opacity-80" />
-        <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,var(--color-gold),transparent)]" />
-        <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-7xl gap-14 px-6 py-10 md:px-10 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:px-16">
-          <div className="relative z-10 max-w-2xl space-y-8">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-border-strong)] bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--color-charcoal)] shadow-[0_10px_30px_rgba(110,93,58,0.08)] backdrop-blur">
-              <Sparkles className="size-3.5 text-[color:var(--color-gold-deep)]" />
-              Premium Fashion House
-            </span>
-            <div className="space-y-6 reveal-up">
-              <p className="text-sm font-medium uppercase tracking-[0.35em] text-[color:var(--color-muted-foreground)]">
-                Missy Miss
-              </p>
-              <h1 className="font-display text-5xl leading-[0.95] tracking-[-0.04em] text-[color:var(--color-charcoal)] sm:text-6xl lg:text-7xl">
-                {hero?.title || "Fashion With Purpose"}
-              </h1>
-              <p className="max-w-xl text-lg leading-8 text-[color:var(--color-muted-foreground)] sm:text-xl">
-                {hero?.subtitle ||
-                  "Premium women's and kids fashion crafted with style, elegance, and sustainability."}
-              </p>
-            </div>
-            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
-              <Link
-                href={heroCtaHref}
-                className={buttonVariants({ size: "lg", className: "group" })}
-              >
-                {hero?.ctaLabel || "Shop Women"}
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-              <Link
-                href={shopKidsHref}
-                className={buttonVariants({ variant: "outline", size: "lg" })}
-              >
-                Shop Kids
-              </Link>
-              <Link
-                href={reclaimedHref}
-                className={buttonVariants({ variant: "ghost", size: "lg" })}
-              >
-                Explore Reclaimed Thread
-              </Link>
-            </div>
-            <div className="grid gap-4 pt-4 sm:grid-cols-3">
-              {[
-                { value: "Curated", label: "Luxury-first visual system" },
-                { value: "Atelier", label: "Collections crafted with intent" },
-                { value: "Editorial", label: "Motion, texture, and warmth" },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-3xl border border-[color:var(--color-border)] bg-white/70 p-5 shadow-[0_16px_60px_rgba(115,97,67,0.08)] backdrop-blur"
-                >
-                  <p className="font-display text-2xl text-[color:var(--color-charcoal)]">
-                    {item.value}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[color:var(--color-muted-foreground)]">
-                    {item.label}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative z-10">
-            <div className="absolute -inset-10 rounded-full bg-[radial-gradient(circle,rgba(212,175,55,0.28),transparent_58%)] blur-3xl" />
-            <div className="logo-panel reveal-up relative overflow-hidden rounded-[2.5rem] border border-white/60 bg-[linear-gradient(145deg,rgba(255,255,255,0.94),rgba(245,241,234,0.72))] p-8 shadow-[0_30px_100px_rgba(117,95,56,0.18)] sm:p-10">
-              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.48),transparent_38%,rgba(212,175,55,0.12)_70%,transparent)]" />
-              <div className="relative flex flex-col items-center gap-8">
-                <BrandLogo variant="full" priority className="w-full max-w-[25rem]" />
-                <div className="grid w-full gap-4 rounded-[2rem] border border-white/70 bg-white/60 p-5 text-left backdrop-blur sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--color-muted-foreground)]">
-                      Signature
-                    </p>
-                    <p className="font-display text-2xl text-[color:var(--color-charcoal)]">
-                      Gold butterfly mark
-                    </p>
-                  </div>
-                  <p className="text-sm leading-7 text-[color:var(--color-muted-foreground)]">
-                    Presented with more contrast, more breathing room, and a
-                    soft foil glow so the logo feels intentional across hero,
-                    header, and footer placements.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HeroCarousel banners={heroBanners} />
 
       <section id="categories" className="mx-auto max-w-7xl px-6 py-16 md:px-10 lg:px-16">
         <div className="mb-8 flex items-center justify-between gap-4">
@@ -157,6 +58,22 @@ export default async function Home() {
           ))}
         </div>
       </section>
+
+      {promoBanners.length ? (
+        <section className="mx-auto grid max-w-7xl gap-5 px-6 pb-16 md:px-10 lg:grid-cols-2 lg:px-16">
+          {promoBanners.slice(0, 4).map((banner) => (
+            <Link className="group relative min-h-80 overflow-hidden rounded-[2.25rem] bg-[color:var(--color-charcoal)] text-white" href={banner.ctaHref || "/shop"} key={banner.id}>
+              {banner.desktopImage ? <Image alt={banner.title} className="object-cover transition duration-700 group-hover:scale-105" fill src={banner.desktopImage} /> : null}
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(20,20,20,.78))]" />
+              <div className="absolute inset-x-0 bottom-0 p-7">
+                <p className="text-xs font-bold uppercase tracking-[.25em] text-white/65">{banner.ctaLabel || "Discover"}</p>
+                <h2 className="mt-2 font-display text-4xl">{banner.title}</h2>
+                <p className="mt-2 max-w-lg text-sm leading-6 text-white/70">{banner.subtitle}</p>
+              </div>
+            </Link>
+          ))}
+        </section>
+      ) : null}
 
       <section
         id="sustainability"

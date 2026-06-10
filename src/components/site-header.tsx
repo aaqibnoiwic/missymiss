@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
-import { Button } from "@/components/ui/button";
+import { CartLink } from "@/components/cart-link";
 import { getNavigationCategories } from "@/lib/cms";
 
 export async function SiteHeader() {
@@ -36,9 +36,7 @@ export async function SiteHeader() {
           <Link href="/about-us">About</Link>
           <Link href="/admin">Admin</Link>
         </nav>
-        <Button variant="outline" className="hidden sm:inline-flex">
-          Book a Styling Edit
-        </Button>
+        <CartLink />
       </div>
     </header>
   );

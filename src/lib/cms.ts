@@ -8,7 +8,7 @@ export async function getEnabledBanners(scope: string, targetSlug = "") {
   return prisma.banner.findMany({
     where: {
       scope,
-      targetSlug,
+      ...(scope === "home" ? {} : { targetSlug }),
       isEnabled: true,
       OR: [{ startsAt: null }, { startsAt: { lte: current } }],
       AND: [{ OR: [{ endsAt: null }, { endsAt: { gte: current } }] }],

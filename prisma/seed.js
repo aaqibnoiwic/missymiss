@@ -368,6 +368,37 @@ async function main() {
         sortOrder: 0,
       },
     });
+
+    const defaultSize = item.sizes.split(",")[0];
+    const defaultColor = item.colors.split(",")[0];
+    await prisma.productVariant.upsert({
+      where: { sku: `${item.slug.toUpperCase()}-${defaultSize.replace(/[^A-Z0-9]/gi, "")}` },
+      update: {
+        productId: product.id,
+        title: `${defaultColor} / ${defaultSize}`,
+        size: defaultSize,
+        color: defaultColor,
+        price: item.price,
+        inventory: item.inventory,
+        weight: 350,
+        length: 30,
+        breadth: 24,
+        height: 5,
+      },
+      create: {
+        productId: product.id,
+        sku: `${item.slug.toUpperCase()}-${defaultSize.replace(/[^A-Z0-9]/gi, "")}`,
+        title: `${defaultColor} / ${defaultSize}`,
+        size: defaultSize,
+        color: defaultColor,
+        price: item.price,
+        inventory: item.inventory,
+        weight: 350,
+        length: 30,
+        breadth: 24,
+        height: 5,
+      },
+    });
   }
 }
 
