@@ -9,7 +9,16 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const [categories, product] = await Promise.all([
     prisma.category.findMany({ select: { id: true, title: true, collectionType: true }, orderBy: [{ collectionType: "asc" }, { sortOrder: "asc" }, { title: "asc" }] }),
-    prisma.product.findUnique({ where: { id }, include: { categories: true, images: { orderBy: { sortOrder: "asc" } }, variants: { orderBy: { sortOrder: "asc" } } } }),
+    prisma.product.findUnique({
+      where: { id },
+      include: {
+        categories: true,
+        images: { orderBy: { sortOrder: "asc" } },
+        variants: { orderBy: { sortOrder: "asc" } },
+        sizeGuideRows: { orderBy: { sortOrder: "asc" } },
+        colorGuideOptions: { orderBy: { sortOrder: "asc" } },
+      },
+    }),
   ]);
   if (!product) notFound();
   const editorProduct = {
@@ -17,6 +26,8 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     categoryIds: product.categories.map((item) => item.categoryId),
     imageUrls: [...new Set([product.featuredImage, ...product.images.map((image) => image.imageUrl)].filter(Boolean))],
     variants: product.variants.map((variant) => ({ ...variant, price: variant.price / 100 })),
+    sizeGuideRows: product.sizeGuideRows.map(({ size, ageRange, chest, waist, hip, length, notes }) => ({ size, ageRange, chest, waist, hip, length, notes })),
+    colorGuideOptions: product.colorGuideOptions.map(({ name, swatchHex, imageUrl, description }) => ({ name, swatchHex, imageUrl, description })),
   };
   return <AdminShell eyebrow="Catalog" title={`Edit ${product.name}`}><ProductEditor categories={categories} product={editorProduct} /></AdminShell>;
 }

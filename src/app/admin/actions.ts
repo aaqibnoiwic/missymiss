@@ -56,6 +56,23 @@ type ProductEditorVariant = {
   isEnabled?: boolean;
 };
 
+type ProductEditorSizeGuideRow = {
+  size?: string;
+  ageRange?: string;
+  chest?: string;
+  waist?: string;
+  hip?: string;
+  length?: string;
+  notes?: string;
+};
+
+type ProductEditorColorGuideOption = {
+  name?: string;
+  swatchHex?: string;
+  imageUrl?: string;
+  description?: string;
+};
+
 function moneyFromRupees(value: FormDataEntryValue | null) {
   const amount = Number(value);
   return Number.isFinite(amount) ? Math.round(amount * 100) : -1;
@@ -66,6 +83,20 @@ function parseVariants(value: string): ProductEditorVariant[] {
   const parsed = JSON.parse(value) as unknown;
   if (!Array.isArray(parsed)) throw new Error("Variants must be a list.");
   return parsed as ProductEditorVariant[];
+}
+
+function parseSizeGuideRows(value: string): ProductEditorSizeGuideRow[] {
+  if (!value) return [];
+  const parsed = JSON.parse(value) as unknown;
+  if (!Array.isArray(parsed)) throw new Error("Size guide must be a list.");
+  return parsed as ProductEditorSizeGuideRow[];
+}
+
+function parseColorGuideOptions(value: string): ProductEditorColorGuideOption[] {
+  if (!value) return [];
+  const parsed = JSON.parse(value) as unknown;
+  if (!Array.isArray(parsed)) throw new Error("Color guide must be a list.");
+  return parsed as ProductEditorColorGuideOption[];
 }
 
 export async function saveProductEditor(
@@ -95,6 +126,35 @@ export async function saveProductEditor(
   } catch {
     fieldErrors.variants = "Variant information is invalid.";
   }
+  let sizeGuideRows: ProductEditorSizeGuideRow[] = [];
+  try {
+    sizeGuideRows = parseSizeGuideRows(text(formData, "sizeGuideRowsJson"))
+      .map((row) => ({
+        size: String(row.size ?? "").trim(),
+        ageRange: String(row.ageRange ?? "").trim(),
+        chest: String(row.chest ?? "").trim(),
+        waist: String(row.waist ?? "").trim(),
+        hip: String(row.hip ?? "").trim(),
+        length: String(row.length ?? "").trim(),
+        notes: String(row.notes ?? "").trim(),
+      }))
+      .filter((row) => row.size || row.ageRange || row.chest || row.waist || row.hip || row.length || row.notes);
+  } catch {
+    fieldErrors.sizeGuideRows = "Size guide information is invalid.";
+  }
+  let colorGuideOptions: ProductEditorColorGuideOption[] = [];
+  try {
+    colorGuideOptions = parseColorGuideOptions(text(formData, "colorGuideOptionsJson"))
+      .map((option) => ({
+        name: String(option.name ?? "").trim(),
+        swatchHex: String(option.swatchHex ?? "").trim(),
+        imageUrl: String(option.imageUrl ?? "").trim(),
+        description: String(option.description ?? "").trim(),
+      }))
+      .filter((option) => option.name || option.swatchHex || option.imageUrl || option.description);
+  } catch {
+    fieldErrors.colorGuideOptions = "Color guide information is invalid.";
+  }
   const duplicateSku = variants.find(
     (variant, index) =>
       variant.sku &&
@@ -102,6 +162,12 @@ export async function saveProductEditor(
   );
   if (variants.some((variant) => !String(variant.sku ?? "").trim())) {
     fieldErrors.variants = "Every variant needs a unique SKU.";
+  }
+  if (sizeGuideRows.some((row) => !row.size)) {
+    fieldErrors.sizeGuideRows = "Every size guide row needs a size label.";
+  }
+  if (colorGuideOptions.some((option) => !option.name)) {
+    fieldErrors.colorGuideOptions = "Every color guide option needs a color name.";
   }
   if (duplicateSku) fieldErrors.variants = `SKU ${duplicateSku.sku} is repeated.`;
   if (Object.keys(fieldErrors).length) {
@@ -184,6 +250,37 @@ export async function saveProductEditor(
             breadth: Math.max(0, Number(variant.breadth ?? 0)),
             height: Math.max(0, Number(variant.height ?? 0)),
             isEnabled: variant.isEnabled !== false,
+            sortOrder,
+          })),
+        });
+      }
+
+      await transaction.productSizeGuideRow.deleteMany({ where: { productId: saved.id } });
+      if (sizeGuideRows.length) {
+        await transaction.productSizeGuideRow.createMany({
+          data: sizeGuideRows.map((row, sortOrder) => ({
+            productId: saved.id,
+            size: row.size ?? "",
+            ageRange: row.ageRange ?? "",
+            chest: row.chest ?? "",
+            waist: row.waist ?? "",
+            hip: row.hip ?? "",
+            length: row.length ?? "",
+            notes: row.notes ?? "",
+            sortOrder,
+          })),
+        });
+      }
+
+      await transaction.productColorGuideOption.deleteMany({ where: { productId: saved.id } });
+      if (colorGuideOptions.length) {
+        await transaction.productColorGuideOption.createMany({
+          data: colorGuideOptions.map((option, sortOrder) => ({
+            productId: saved.id,
+            name: option.name ?? "",
+            swatchHex: option.swatchHex ?? "",
+            imageUrl: option.imageUrl ?? "",
+            description: option.description ?? "",
             sortOrder,
           })),
         });

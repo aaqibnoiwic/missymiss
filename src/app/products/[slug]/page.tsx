@@ -1,4 +1,5 @@
 import { Leaf, Sparkles, Star } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductGallery } from "@/components/product-gallery";
@@ -20,6 +21,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
       categories: { include: { category: true } },
       images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }] },
       variants: { where: { isEnabled: true }, orderBy: { sortOrder: "asc" } },
+      sizeGuideRows: { orderBy: { sortOrder: "asc" } },
+      colorGuideOptions: { orderBy: { sortOrder: "asc" } },
       reviews: {
         where: { isPublished: true },
         orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }, { createdAt: "desc" }],
@@ -56,7 +59,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     ["Material", product.material],
     ["Fit & silhouette", product.fitDetails],
     ["Care instructions", product.careInstructions],
-    ["Size guide", product.sizeGuide],
+    ["Size notes", product.sizeGuide],
     ["Shipping & returns", product.shippingReturns],
   ].filter(([, value]) => value);
 
@@ -95,6 +98,68 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           </div>
         </div>
       </section>
+
+      {product.sizeGuideRows.length || product.colorGuideOptions.length ? (
+        <section className="mx-auto grid max-w-7xl gap-5 px-6 pb-16 md:px-10 lg:grid-cols-[1.1fr_.9fr] lg:px-16">
+          {product.sizeGuideRows.length ? (
+            <div className="rounded-[2rem] border border-[color:var(--color-border)] bg-white/82 p-6">
+              <p className="section-label">Size Guide</p>
+              <h2 className="mt-2 font-display text-3xl">Find the right fit</h2>
+              <div className="mt-5 overflow-x-auto">
+                <table className="w-full min-w-[42rem] text-left text-sm">
+                  <thead className="border-b border-[color:var(--color-border)] text-xs uppercase tracking-[.18em] text-[color:var(--color-muted-foreground)]">
+                    <tr>
+                      <th className="py-3 pr-4">Size</th>
+                      <th className="py-3 pr-4">Age</th>
+                      <th className="py-3 pr-4">Chest</th>
+                      <th className="py-3 pr-4">Waist</th>
+                      <th className="py-3 pr-4">Hip</th>
+                      <th className="py-3 pr-4">Length</th>
+                      <th className="py-3 pr-4">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {product.sizeGuideRows.map((row) => (
+                      <tr className="border-b border-[color:var(--color-border)] last:border-0" key={row.id}>
+                        <td className="py-3 pr-4 font-semibold">{row.size}</td>
+                        <td className="py-3 pr-4">{row.ageRange || "-"}</td>
+                        <td className="py-3 pr-4">{row.chest || "-"}</td>
+                        <td className="py-3 pr-4">{row.waist || "-"}</td>
+                        <td className="py-3 pr-4">{row.hip || "-"}</td>
+                        <td className="py-3 pr-4">{row.length || "-"}</td>
+                        <td className="py-3 pr-4">{row.notes || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+          {product.colorGuideOptions.length ? (
+            <div className="rounded-[2rem] border border-[color:var(--color-border)] bg-white/82 p-6">
+              <p className="section-label">Color Guide</p>
+              <h2 className="mt-2 font-display text-3xl">Available shades</h2>
+              <div className="mt-5 grid gap-3">
+                {product.colorGuideOptions.map((option) => (
+                  <div className="flex items-center gap-4 rounded-2xl border border-[color:var(--color-border)] bg-white p-3" key={option.id}>
+                    {option.imageUrl ? (
+                      <span className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-[color:var(--color-paper)]">
+                        <Image alt={option.name} className="object-cover" fill sizes="56px" src={option.imageUrl} />
+                      </span>
+                    ) : (
+                      <span className="size-14 shrink-0 rounded-xl border border-[color:var(--color-border-strong)]" style={{ backgroundColor: option.swatchHex || "#ffffff" }} />
+                    )}
+                    <span className="min-w-0">
+                      <strong className="block">{option.name}</strong>
+                      {option.description ? <span className="mt-1 block text-sm text-[color:var(--color-muted-foreground)]">{option.description}</span> : null}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {details.length ? (
         <section className="mx-auto max-w-7xl px-6 pb-16 md:px-10 lg:px-16">
