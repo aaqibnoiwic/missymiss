@@ -3,6 +3,7 @@ import { isAdminRequestAuthenticated } from "@/lib/auth";
 
 const NVIDIA_INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const MODEL = "moonshotai/kimi-k2.6";
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 type AiProductCopy = {
   productName: string;
@@ -25,6 +26,40 @@ function parseAiCopy(content: string): AiProductCopy {
   }
 }
 
+async function loadImageDataUrl(imageUrl: string) {
+  const response = await fetch(imageUrl);
+  if (!response.ok) {
+    throw new Error("Could not load the uploaded image for analysis.");
+  }
+
+  const contentType = response.headers.get("content-type")?.split(";")[0]?.trim() || "image/jpeg";
+  if (!contentType.startsWith("image/")) {
+    throw new Error("Only image files can be analysed.");
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.length > MAX_IMAGE_BYTES) {
+    throw new Error("Image is too large for AI analysis. Use an image under 8MB.");
+  }
+
+  return `data:${contentType};base64,${buffer.toString("base64")}`;
+}
+
+async function readNvidiaError(response: Response) {
+  const errorText = await response.text();
+  if (!errorText) return "AI analysis failed.";
+
+  try {
+    const payload = JSON.parse(errorText) as {
+      error?: { message?: string };
+      message?: string;
+    };
+    return payload.error?.message || payload.message || errorText;
+  } catch {
+    return errorText;
+  }
+}
+
 export async function POST(request: NextRequest) {
   if (!isAdminRequestAuthenticated(request)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -43,7 +78,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Please upload a product image first." }, { status: 400 });
   }
 
-  const absoluteImageUrl = new URL(imageUrl, request.nextUrl.origin).toString();
+  let imageDataUrl: string;
+  try {
+    const absoluteImageUrl = new URL(imageUrl, request.nextUrl.origin).toString();
+    imageDataUrl = await loadImageDataUrl(absoluteImageUrl);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Could not prepare image for analysis." },
+      { status: 400 },
+    );
+  }
+
   const response = await fetch(NVIDIA_INVOKE_URL, {
     method: "POST",
     headers: {
@@ -64,7 +109,7 @@ export async function POST(request: NextRequest) {
             },
             {
               type: "image_url",
-              image_url: { url: absoluteImageUrl },
+              image_url: { url: imageDataUrl },
             },
           ],
         },
@@ -77,9 +122,8 @@ export async function POST(request: NextRequest) {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
     return NextResponse.json(
-      { error: errorText || "AI analysis failed." },
+      { error: await readNvidiaError(response) },
       { status: response.status },
     );
   }
