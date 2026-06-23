@@ -14,9 +14,46 @@ export default async function Home() {
     await getHomeData();
   const heroBanners = banners.filter((banner) => banner.placement === "hero");
   const promoBanners = banners.filter((banner) => banner.placement !== "hero");
+  const homepageProducts = [
+    ...featuredProducts,
+    ...newArrivals.filter(
+      (arrival) => !featuredProducts.some((featured) => featured.id === arrival.id),
+    ),
+  ].slice(0, 4);
   return (
     <main className="overflow-hidden">
       <HeroCarousel banners={heroBanners} />
+
+      <section className="mx-auto max-w-7xl px-6 py-16 md:px-10 lg:px-16">
+        <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+          <div className="space-y-5">
+            <p className="section-label">Style In Motion</p>
+            <h2 className="section-title max-w-xl">
+              Office fit check, captured in real time
+            </h2>
+            <p className="max-w-lg text-base leading-8 text-[color:var(--color-muted-foreground)]">
+              A closer look at Missy Miss styling with soft tailoring, elegant
+              texture, and a polished everyday silhouette.
+            </p>
+            <Link href="/shop" className={buttonVariants({ variant: "outline" })}>
+              Shop The Look
+            </Link>
+          </div>
+          <div className="flex justify-center">
+            <video
+              className="h-auto max-h-[80svh] w-full max-w-md object-contain"
+              controls
+              loop
+              muted
+              playsInline
+              preload="metadata"
+            >
+              <source src="/IMG_3906.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </div>
+      </section>
 
       <section id="categories" className="mx-auto max-w-7xl px-6 py-16 md:px-10 lg:px-16">
         <div className="mb-8 flex items-center justify-between gap-4">
@@ -102,9 +139,10 @@ export default async function Home() {
                 A sustainable movement dressed in elegance
               </h2>
               <p className="mt-5 max-w-lg text-base leading-8 text-white/76">
-                Reclaimed Thread rescues discarded textiles, production scraps,
-                and unsold garments, transforming them into high-quality wearable
-                pieces with a lighter footprint.
+                Reclaimed Thread is a sustainable movement that rescues
+                discarded textiles, production scraps, and unsold garments,
+                turning them into high-quality, wearable clothing and
+                accessories.
               </p>
               <div className="mt-8 inline-flex w-fit items-center gap-3 rounded-full border border-white/20 bg-black/25 px-4 py-3 text-sm backdrop-blur-md">
                 <Leaf className="size-4 text-[color:var(--color-gold)]" />
@@ -114,24 +152,39 @@ export default async function Home() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {[
-              "Textile rescue",
-              "Small-batch redesign",
-              "Luxury finishing",
-              "Lower waste footprint",
+              {
+                title: "Textile rescue",
+                description:
+                  "Give discarded fabrics and unsold garments a second life through thoughtful sourcing and material recovery.",
+              },
+              {
+                title: "Curated & premium womenswear",
+                description:
+                  "Shape every collection, campaign, and product story around an elevated, feminine, and carefully edited point of view.",
+              },
+              {
+                title: "Coord sets",
+                description:
+                  "Matching sets designed for effortless dressing, polished silhouettes, and easy day-to-night styling.",
+              },
+              {
+                title: "Lounge wear",
+                description:
+                  "Comfort-led pieces with a refined finish, created for relaxed routines without losing the Missy Miss elegance.",
+              },
             ].map((item) => (
               <div
-                key={item}
+                key={item.title}
                 className="rounded-[2rem] border border-[color:var(--color-border)] bg-white/85 p-6 shadow-[0_16px_50px_rgba(117,96,58,0.08)]"
               >
                 <div className="mb-5 inline-flex size-11 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,rgba(212,175,55,0.25),rgba(255,255,255,0.95))] text-[color:var(--color-gold-deep)]">
                   <Star className="size-4" />
                 </div>
                 <h3 className="font-display text-2xl text-[color:var(--color-charcoal)]">
-                  {item}
+                  {item.title}
                 </h3>
                 <p className="mt-3 text-sm leading-7 text-[color:var(--color-muted-foreground)]">
-                  A distinct brand story designed to support future product
-                  drops, campaigns, and circular fashion edits.
+                  {item.description}
                 </p>
               </div>
             ))}
@@ -150,7 +203,7 @@ export default async function Home() {
           </Link>
         </div>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {[...featuredProducts, ...newArrivals].slice(0, 4).map((product) => (
+          {homepageProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

@@ -105,6 +105,8 @@ const categories = [
   ["bottoms", "Bottoms", "women", "Effortless foundations", "Pants, trousers, jeans, and skirts for refined everyday dressing."],
   ["ethnic-wear", "Ethnic Wear", "women", "Modern heritage", "Kurtas, kurta sets, and ethnic dresses with graceful details."],
   ["office-wear", "Office Wear", "women", "Confident dressing", "Formal shirts, pants, co-ord sets, and blazers with polish."],
+  ["coord-sets", "Coord sets", "women", "Matched elegance", "Matching sets designed for effortless dressing, polished silhouettes, and easy day-to-night styling."],
+  ["lounge-wear", "Lounge wear", "women", "Comfort with polish", "Comfort-led pieces with a refined finish, created for relaxed routines without losing the Missy Miss elegance."],
   ["baby-girls-0-2-years", "Baby Girls (0-2 Years)", "baby-girls", "Gentle beginnings", "Dresses, rompers, sets, and accessories for little wardrobes."],
   ["baby-girls-2-5-years", "Baby Girls (2-5 Years)", "baby-girls", "Playful refinement", "Dresses, party wear, casual wear, and seasonal collections."],
   ["eco-queens", "Eco Queens", "reclaimed-thread", "Sustainable statement pieces", "Circular fashion pieces with expressive, elevated details."],

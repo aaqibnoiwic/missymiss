@@ -65,7 +65,6 @@ export async function getHomeData() {
       prisma.category.findMany({
         where: { isPublished: true },
         orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
-        take: 6,
       }),
       prisma.product.findMany({
         where: { isPublished: true, isFeatured: true },
@@ -86,7 +85,29 @@ export async function getHomeData() {
       }),
     ]);
 
-  return { banners, categories, featuredProducts, newArrivals, testimonials };
+  const featuredCategorySlugs = [
+    "office-wear",
+    "coord-sets",
+    "lounge-wear",
+    "tops-shirts",
+    "dresses",
+    "reclaimed-thread",
+  ];
+  const prioritizedCategories = categories.sort((left, right) => {
+    const leftIndex = featuredCategorySlugs.indexOf(left.slug);
+    const rightIndex = featuredCategorySlugs.indexOf(right.slug);
+    const normalizedLeft = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
+    const normalizedRight = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
+    return normalizedLeft - normalizedRight;
+  }).slice(0, 6);
+
+  return {
+    banners,
+    categories: prioritizedCategories,
+    featuredProducts,
+    newArrivals,
+    testimonials,
+  };
 }
 
 export async function getShopProducts(options: {

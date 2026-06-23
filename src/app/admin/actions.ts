@@ -78,6 +78,16 @@ function moneyFromRupees(value: FormDataEntryValue | null) {
   return Number.isFinite(amount) ? Math.round(amount * 100) : -1;
 }
 
+function requiredMoneyFromRupees(value: FormDataEntryValue | null) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return -1;
+  return moneyFromRupees(value);
+}
+
+function slugify(value: string) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 function parseVariants(value: string): ProductEditorVariant[] {
   if (!value) return [];
   const parsed = JSON.parse(value) as unknown;
@@ -106,8 +116,8 @@ export async function saveProductEditor(
   await requireAdmin();
   const id = text(formData, "id");
   const name = text(formData, "name");
-  const slug = text(formData, "slug");
-  const price = moneyFromRupees(formData.get("price"));
+  const slug = text(formData, "slug") || slugify(name);
+  const price = requiredMoneyFromRupees(formData.get("price"));
   const inventory = int(formData, "inventory");
   const categoryIds = [...new Set(formData.getAll("categoryIds").map(String).filter(Boolean))];
   const galleryImageUrls = [
@@ -116,8 +126,8 @@ export async function saveProductEditor(
   const fieldErrors: Record<string, string> = {};
 
   if (!name) fieldErrors.name = "Enter a product name.";
-  if (!slug) fieldErrors.slug = "Enter a product slug.";
   if (price < 0) fieldErrors.price = "Enter a valid price in rupees.";
+  if (!galleryImageUrls.length) fieldErrors.galleryImageUrls = "Upload at least one product image.";
   if (inventory < 0) fieldErrors.inventory = "Stock cannot be negative.";
 
   let variants: ProductEditorVariant[] = [];
@@ -160,9 +170,6 @@ export async function saveProductEditor(
       variant.sku &&
       variants.findIndex((candidate) => candidate.sku === variant.sku) !== index,
   );
-  if (variants.some((variant) => !String(variant.sku ?? "").trim())) {
-    fieldErrors.variants = "Every variant needs a unique SKU.";
-  }
   if (sizeGuideRows.some((row) => !row.size)) {
     fieldErrors.sizeGuideRows = "Every size guide row needs a size label.";
   }
@@ -173,6 +180,33 @@ export async function saveProductEditor(
   if (Object.keys(fieldErrors).length) {
     return { success: false, message: "", fieldErrors, formError: "" };
   }
+
+  const usableVariants = variants
+    .map((variant) => ({
+      title: String(variant.title ?? "").trim(),
+      sku: String(variant.sku ?? "").trim(),
+      size: String(variant.size ?? "").trim(),
+      color: String(variant.color ?? "").trim(),
+      price: Number(variant.price ?? 0),
+      inventory: Number(variant.inventory ?? 0),
+      weight: Number(variant.weight ?? 0),
+      length: Number(variant.length ?? 0),
+      breadth: Number(variant.breadth ?? 0),
+      height: Number(variant.height ?? 0),
+      isEnabled: variant.isEnabled !== false,
+    }))
+    .filter((variant) =>
+      variant.title ||
+      variant.sku ||
+      variant.size ||
+      variant.color ||
+      variant.price > 0 ||
+      variant.inventory > 0 ||
+      variant.weight > 0 ||
+      variant.length > 0 ||
+      variant.breadth > 0 ||
+      variant.height > 0,
+    );
 
   const data = {
     slug,
@@ -199,7 +233,7 @@ export async function saveProductEditor(
     isSustainable: bool(formData, "isSustainable"),
     featuredImage: galleryImageUrls[0] ?? "",
     videoUrl: text(formData, "videoUrl"),
-    sizes: text(formData, "sizes"),
+    sizes: [...new Set(formData.getAll("sizes").map(String).map((size) => size.trim()).filter(Boolean))].join(", "),
     colors: text(formData, "colors"),
     metaTitle: text(formData, "metaTitle"),
     metaDescription: text(formData, "metaDescription"),
@@ -208,41 +242,50 @@ export async function saveProductEditor(
   };
 
   try {
-    const product = await prisma.$transaction(async (transaction) => {
-      const saved = id
-        ? await transaction.product.update({ where: { id }, data })
-        : await transaction.product.create({ data });
+    const product = id
+      ? await prisma.product.update({ where: { id }, data })
+      : await prisma.product.create({ data });
 
-      await transaction.productCategory.deleteMany({ where: { productId: saved.id } });
-      if (categoryIds.length) {
-        await transaction.productCategory.createMany({
-          data: categoryIds.map((categoryId) => ({ productId: saved.id, categoryId })),
+    const syncQueries: Prisma.PrismaPromise<unknown>[] = [
+      prisma.productCategory.deleteMany({ where: { productId: product.id } }),
+      prisma.productImage.deleteMany({ where: { productId: product.id } }),
+      prisma.productVariant.deleteMany({ where: { productId: product.id } }),
+      prisma.productSizeGuideRow.deleteMany({ where: { productId: product.id } }),
+      prisma.productColorGuideOption.deleteMany({ where: { productId: product.id } }),
+    ];
+
+    if (categoryIds.length) {
+      syncQueries.push(
+        prisma.productCategory.createMany({
+          data: categoryIds.map((categoryId) => ({ productId: product.id, categoryId })),
           skipDuplicates: true,
-        });
-      }
+        }),
+      );
+    }
 
-      await transaction.productImage.deleteMany({ where: { productId: saved.id } });
-      if (galleryImageUrls.length) {
-        await transaction.productImage.createMany({
+    if (galleryImageUrls.length) {
+      syncQueries.push(
+        prisma.productImage.createMany({
           data: galleryImageUrls.map((imageUrl, sortOrder) => ({
-            productId: saved.id,
+            productId: product.id,
             imageUrl,
             alt: name,
             isFeatured: sortOrder === 0,
             sortOrder,
           })),
-        });
-      }
+        }),
+      );
+    }
 
-      await transaction.productVariant.deleteMany({ where: { productId: saved.id } });
-      if (variants.length) {
-        await transaction.productVariant.createMany({
-          data: variants.map((variant, sortOrder) => ({
-            productId: saved.id,
-            sku: String(variant.sku ?? "").trim(),
-            title: String(variant.title ?? "").trim(),
-            size: String(variant.size ?? "").trim(),
-            color: String(variant.color ?? "").trim(),
+    if (usableVariants.length) {
+      syncQueries.push(
+        prisma.productVariant.createMany({
+          data: usableVariants.map((variant, sortOrder) => ({
+            productId: product.id,
+            sku: variant.sku || `${slug}-${sortOrder + 1}`,
+            title: variant.title,
+            size: variant.size,
+            color: variant.color,
             price: Math.round(Number(variant.price ?? 0) * 100),
             inventory: Math.max(0, Number(variant.inventory ?? 0)),
             weight: Math.max(0, Number(variant.weight ?? 0)),
@@ -252,14 +295,15 @@ export async function saveProductEditor(
             isEnabled: variant.isEnabled !== false,
             sortOrder,
           })),
-        });
-      }
+        }),
+      );
+    }
 
-      await transaction.productSizeGuideRow.deleteMany({ where: { productId: saved.id } });
-      if (sizeGuideRows.length) {
-        await transaction.productSizeGuideRow.createMany({
+    if (sizeGuideRows.length) {
+      syncQueries.push(
+        prisma.productSizeGuideRow.createMany({
           data: sizeGuideRows.map((row, sortOrder) => ({
-            productId: saved.id,
+            productId: product.id,
             size: row.size ?? "",
             ageRange: row.ageRange ?? "",
             chest: row.chest ?? "",
@@ -269,24 +313,26 @@ export async function saveProductEditor(
             notes: row.notes ?? "",
             sortOrder,
           })),
-        });
-      }
+        }),
+      );
+    }
 
-      await transaction.productColorGuideOption.deleteMany({ where: { productId: saved.id } });
-      if (colorGuideOptions.length) {
-        await transaction.productColorGuideOption.createMany({
+    if (colorGuideOptions.length) {
+      syncQueries.push(
+        prisma.productColorGuideOption.createMany({
           data: colorGuideOptions.map((option, sortOrder) => ({
-            productId: saved.id,
+            productId: product.id,
             name: option.name ?? "",
             swatchHex: option.swatchHex ?? "",
             imageUrl: option.imageUrl ?? "",
             description: option.description ?? "",
             sortOrder,
           })),
-        });
-      }
-      return saved;
-    });
+        }),
+      );
+    }
+
+    await prisma.$transaction(syncQueries);
 
     refreshCms();
     revalidatePath("/admin/products");
@@ -522,6 +568,8 @@ export async function deleteProduct(formData: FormData) {
   if (!id) return;
   await prisma.product.delete({ where: { id } });
   refreshCms();
+  revalidatePath("/admin/products");
+  revalidatePath(`/admin/products/${id}`);
 }
 
 export async function saveProductImage(formData: FormData) {

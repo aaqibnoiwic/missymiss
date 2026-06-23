@@ -1,16 +1,26 @@
 "use client";
 
 import Image from "next/image";
-import { ChangeEvent, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ImagePlus, LoaderCircle, Star, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { BatchMediaResponse } from "@/types/media";
 
-export function MultiImageUpload({ defaultUrls = [] }: { defaultUrls?: string[] }) {
+export function MultiImageUpload({
+  defaultUrls = [],
+  onUrlsChange,
+}: {
+  defaultUrls?: string[];
+  onUrlsChange?: (urls: string[]) => void;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [urls, setUrls] = useState(defaultUrls);
   const [errors, setErrors] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    onUrlsChange?.(urls);
+  }, [onUrlsChange, urls]);
 
   async function uploadFiles(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);

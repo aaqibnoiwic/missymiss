@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Sparkles, Trash2, X } from "lucide-react";
 import { saveProductEditor } from "@/app/admin/actions";
 import { MultiImageUpload } from "@/components/admin/multi-image-upload";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,25 @@ const input = "mt-2 h-11 w-full rounded-xl border border-[color:var(--color-bord
 const textarea = `${input} min-h-28 py-3`;
 const section = "rounded-2xl border border-[color:var(--color-border)] bg-white/85 p-5";
 const sizeOptions = ["0-2 Years", "2-5 Years", "XS", "S", "M", "L", "XL", "XXL", "Free Size"];
+const defaultColorOptions = [
+  "Black",
+  "White",
+  "Ivory",
+  "Cream",
+  "Beige",
+  "Brown",
+  "Grey",
+  "Navy",
+  "Blue",
+  "Pink",
+  "Red",
+  "Maroon",
+  "Green",
+  "Sage",
+  "Yellow",
+  "Gold",
+  "Silver",
+];
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -121,19 +140,51 @@ function SizeSelect({ label, onChange, value }: { label: string; onChange: (valu
   );
 }
 
-export function ProductEditor({ categories, product }: { categories: CategoryOption[]; product?: ProductValue }) {
+export function ProductEditor({
+  categories,
+  colorOptions,
+  product,
+}: {
+  categories: CategoryOption[];
+  colorOptions: string[];
+  product?: ProductValue;
+}) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(saveProductEditor, initialAdminActionState);
   const [name, setName] = useState(product?.name ?? "");
   const [slug, setSlug] = useState(product?.slug ?? "");
   const [slugEdited, setSlugEdited] = useState(Boolean(product));
+  const [shortDescription, setShortDescription] = useState(product?.shortDescription ?? "");
+  const [description, setDescription] = useState(product?.description ?? "");
+  const [highlights, setHighlights] = useState(product?.highlights ?? "");
+  const [imageUrls, setImageUrls] = useState(product?.imageUrls ?? []);
+  const [analysing, setAnalysing] = useState(false);
+  const [analysisError, setAnalysisError] = useState("");
   const [variants, setVariants] = useState<VariantValue[]>(product?.variants ?? []);
-  const [sizeGuideRows, setSizeGuideRows] = useState<SizeGuideRowValue[]>(product?.sizeGuideRows ?? []);
-  const [colors, setColors] = useState(product?.colors || product?.colorGuideOptions?.map((option) => option.name).filter(Boolean).join(", ") || "");
+  const [customColor, setCustomColor] = useState("");
+  const [selectedColors, setSelectedColors] = useState(() => {
+    const savedColors = [
+      ...(product?.colors ?? "").split(","),
+      ...(product?.colorGuideOptions ?? []).map((option) => option.name),
+    ].map((color) => color.trim()).filter(Boolean);
+    return [...new Set(savedColors)];
+  });
+  const availableColorOptions = [...new Set([...defaultColorOptions, ...colorOptions, ...selectedColors])]
+    .map((color) => color.trim())
+    .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right));
+  const [selectedSizes, setSelectedSizes] = useState(() => {
+    const savedSizes = (product?.sizes ?? "").split(",").map((size) => size.trim()).filter(Boolean);
+    const detailSizes = [
+      ...(product?.sizeGuideRows ?? []).map((row) => row.size),
+      ...(product?.variants ?? []).map((variant) => variant.size),
+    ].map((size) => size.trim()).filter(Boolean);
+    return [...new Set([...savedSizes, ...detailSizes])];
+  });
 
   useEffect(() => {
-    if (state.success && state.entityId && !product) router.replace(`/admin/products/${state.entityId}`);
-  }, [product, router, state.entityId, state.success]);
+    if (state.success && !product) router.replace("/admin/products");
+  }, [product, router, state.success]);
 
   function updateVariant(index: number, key: keyof VariantValue, value: string | boolean) {
     setVariants((current) => current.map((variant, itemIndex) => itemIndex === index
@@ -141,24 +192,70 @@ export function ProductEditor({ categories, product }: { categories: CategoryOpt
       : variant));
   }
 
-  function updateSizeGuideRow(index: number, key: keyof SizeGuideRowValue, value: string) {
-    setSizeGuideRows((current) => current.map((row, itemIndex) => itemIndex === index ? { ...row, [key]: value } : row));
+  function toggleColor(color: string, checked: boolean) {
+    setSelectedColors((current) => checked
+      ? [...new Set([...current, color])]
+      : current.filter((item) => item !== color));
   }
 
-  const sizeSummary = [
-    ...new Set([...sizeGuideRows.map((row) => row.size), ...variants.map((variant) => variant.size)].map((value) => value.trim()).filter(Boolean)),
-  ].join(", ");
-  const colorGuideOptions = [
-    ...new Set(colors.split(",").map((color) => color.trim()).filter(Boolean)),
-  ].map((color) => ({ name: color, swatchHex: "", imageUrl: "", description: "" }));
+  function addCustomColor() {
+    const normalized = customColor.trim();
+    if (!normalized) return;
+    setSelectedColors((current) => [...new Set([...current, normalized])]);
+    setCustomColor("");
+  }
+
+  async function analyseFirstImage() {
+    const imageUrl = imageUrls[0];
+    if (!imageUrl) {
+      setAnalysisError("Upload at least one image before analysing.");
+      return;
+    }
+
+    setAnalysing(true);
+    setAnalysisError("");
+    try {
+      const response = await fetch("/api/admin/products/analyse-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl }),
+      });
+      const payload = await response.json() as {
+        productName?: string;
+        description?: string;
+        highlights?: string[];
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error || "AI analysis failed.");
+
+      if (payload.productName) {
+        setName(payload.productName);
+        if (!slugEdited) setSlug(slugify(payload.productName));
+      }
+      if (payload.description) {
+        setDescription(payload.description);
+        setShortDescription(payload.description.split(".")[0]?.trim() || payload.description);
+      }
+      if (payload.highlights?.length) {
+        setHighlights(payload.highlights.map((highlight) => `- ${highlight}`).join("\n"));
+      }
+    } catch (error) {
+      setAnalysisError(error instanceof Error ? error.message : "AI analysis failed.");
+    } finally {
+      setAnalysing(false);
+    }
+  }
+
+  const colorGuideOptions = selectedColors.map((color) => ({ name: color, swatchHex: "", imageUrl: "", description: "" }));
 
   return (
     <form action={formAction} className="space-y-5">
       {product ? <input name="id" type="hidden" value={product.id} /> : null}
       <input name="variantsJson" type="hidden" value={JSON.stringify(variants)} />
-      <input name="sizeGuideRowsJson" type="hidden" value={JSON.stringify(sizeGuideRows)} />
+      <input name="sizeGuideRowsJson" type="hidden" value="[]" />
       <input name="colorGuideOptionsJson" type="hidden" value={JSON.stringify(colorGuideOptions)} />
-      <input name="sizes" type="hidden" value={sizeSummary} />
+      <input name="colors" type="hidden" value={selectedColors.join(", ")} />
+      {selectedSizes.map((size) => <input key={size} name="sizes" type="hidden" value={size} />)}
       {state.formError ? <p className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{state.formError}</p> : null}
       {state.message ? <p className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{state.message}</p> : null}
 
@@ -169,7 +266,7 @@ export function ProductEditor({ categories, product }: { categories: CategoryOpt
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="text-sm font-semibold">
-            Product name
+            Product name *
             <input
               className={input}
               name="name"
@@ -182,14 +279,33 @@ export function ProductEditor({ categories, product }: { categories: CategoryOpt
             {state.fieldErrors.name ? <span className="mt-1 block text-xs text-red-700">{state.fieldErrors.name}</span> : null}
           </label>
           <label className="text-sm font-semibold">
-            Slug
+            Slug (optional)
             <input className={input} name="slug" onChange={(event) => { setSlug(event.target.value); setSlugEdited(true); }} value={slug} />
             {state.fieldErrors.slug ? <span className="mt-1 block text-xs text-red-700">{state.fieldErrors.slug}</span> : null}
           </label>
-          <Field defaultValue={(product?.price ?? 0) / 100} error={state.fieldErrors.price} label="Price in rupees" name="price" type="number" />
+          <Field defaultValue={product ? product.price / 100 : ""} error={state.fieldErrors.price} label="Price in rupees *" name="price" type="number" />
           <Field defaultValue={product?.inventory ?? 0} error={state.fieldErrors.inventory} label="Basic stock" name="inventory" type="number" />
           <Field defaultValue={product?.sku} label="Basic SKU (optional)" name="sku" />
           <Field defaultValue={product?.compareAtPrice ? product.compareAtPrice / 100 : ""} label="Compare-at price in rupees" name="compareAtPrice" type="number" />
+        </div>
+        <div className="mt-5">
+          <p className="text-sm font-semibold">Available sizes</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {sizeOptions.map((size) => (
+              <label className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm font-semibold" key={size}>
+                <input
+                  checked={selectedSizes.includes(size)}
+                  onChange={(event) => {
+                    setSelectedSizes((current) => event.target.checked
+                      ? [...new Set([...current, size])]
+                      : current.filter((item) => item !== size));
+                  }}
+                  type="checkbox"
+                />
+                {size}
+              </label>
+            ))}
+          </div>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((category) => (
@@ -206,61 +322,81 @@ export function ProductEditor({ categories, product }: { categories: CategoryOpt
       </section>
 
       <section className={section}>
-        <p className="mb-4 text-sm font-semibold">Product images</p>
-        <MultiImageUpload defaultUrls={product?.imageUrls} />
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-semibold">Product images *</p>
+          <Button disabled={!imageUrls.length || analysing} onClick={analyseFirstImage} type="button" variant="outline">
+            <Sparkles className="size-4" />
+            {analysing ? "Analysing..." : "Analyse with AI"}
+          </Button>
+        </div>
+        <MultiImageUpload defaultUrls={product?.imageUrls} onUrlsChange={setImageUrls} />
+        {state.fieldErrors.galleryImageUrls ? <p className="mt-3 text-sm text-red-700">{state.fieldErrors.galleryImageUrls}</p> : null}
+        {analysisError ? <p className="mt-3 text-sm text-red-700">{analysisError}</p> : null}
       </section>
 
       <details className={section} open>
-        <summary className="cursor-pointer font-display text-2xl">Size and color guides</summary>
-        <div className="mt-5 space-y-6">
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">Size guide rows</p>
-                <p className="text-xs text-[color:var(--color-muted-foreground)]">Use inches or cm consistently in each product.</p>
-              </div>
-              <Button
-                onClick={() => setSizeGuideRows((current) => [...current, { size: "", ageRange: "", chest: "", waist: "", hip: "", length: "", notes: "" }])}
-                type="button"
-                variant="outline"
-              >
-                <Plus className="size-4" /> Add size
-              </Button>
-            </div>
-            <div className="mt-3 space-y-3">
-              {sizeGuideRows.map((row, index) => (
-                <div className="grid gap-3 rounded-2xl border border-[color:var(--color-border)] p-4 md:grid-cols-4" key={index}>
-                  <SizeSelect label="Size" onChange={(value) => updateSizeGuideRow(index, "size", value)} value={row.size} />
-                  {(["ageRange", "chest", "waist", "hip", "length", "notes"] as const).map((key) => (
-                    <label className={`text-xs font-semibold ${key === "notes" ? "md:col-span-2" : ""}`} key={key}>
-                      {key === "ageRange" ? "Age range" : key}
-                      <input className={input} onChange={(event) => updateSizeGuideRow(index, key, event.target.value)} value={row[key]} />
+        <summary className="cursor-pointer font-display text-2xl">Colors</summary>
+        <div className="mt-5 space-y-4">
+          <div className="relative">
+            <details className="group">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-[color:var(--color-border-strong)] bg-white px-4 text-sm font-semibold">
+                <span>{selectedColors.length ? `${selectedColors.length} color${selectedColors.length === 1 ? "" : "s"} selected` : "Select colors"}</span>
+                <span className="text-xs text-[color:var(--color-muted-foreground)]">Open</span>
+              </summary>
+              <div className="absolute z-20 mt-2 max-h-72 w-full overflow-y-auto rounded-xl border border-[color:var(--color-border)] bg-white p-3 shadow-[0_18px_60px_rgba(44,44,44,.14)]">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {availableColorOptions.map((color) => (
+                    <label className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold hover:bg-[color:var(--color-paper)]" key={color}>
+                      <input checked={selectedColors.includes(color)} onChange={(event) => toggleColor(color, event.target.checked)} type="checkbox" />
+                      {color}
                     </label>
                   ))}
-                  <Button onClick={() => setSizeGuideRows((current) => current.filter((_, itemIndex) => itemIndex !== index))} type="button" variant="ghost">
-                    <Trash2 className="size-4" /> Remove
-                  </Button>
                 </div>
-              ))}
-              {state.fieldErrors.sizeGuideRows ? <p className="text-sm text-red-700">{state.fieldErrors.sizeGuideRows}</p> : null}
-            </div>
+              </div>
+            </details>
           </div>
 
-          <label className="block text-sm font-semibold">
-            Colors
-            <input className={input} name="colors" onChange={(event) => setColors(event.target.value)} placeholder="Ivory, Pink, Sage" value={colors} />
-            <span className="mt-1 block text-xs text-[color:var(--color-muted-foreground)]">Separate colors with commas.</span>
-            {state.fieldErrors.colorGuideOptions ? <span className="mt-1 block text-xs text-red-700">{state.fieldErrors.colorGuideOptions}</span> : null}
-          </label>
+          {selectedColors.length ? (
+            <div className="flex flex-wrap gap-2">
+              {selectedColors.map((color) => (
+                <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-border)] bg-white px-3 py-1 text-sm font-semibold" key={color}>
+                  {color}
+                  <button aria-label={`Remove ${color}`} onClick={() => toggleColor(color, false)} type="button">
+                    <X className="size-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <label className="text-sm font-semibold">
+              Custom color
+              <input className={input} onChange={(event) => setCustomColor(event.target.value)} placeholder="Add another color" value={customColor} />
+            </label>
+            <Button onClick={addCustomColor} type="button" variant="outline">
+              <Plus className="size-4" /> Add color
+            </Button>
+          </div>
+          {state.fieldErrors.colorGuideOptions ? <span className="block text-xs text-red-700">{state.fieldErrors.colorGuideOptions}</span> : null}
         </div>
       </details>
 
       <details className={section}>
         <summary className="cursor-pointer font-display text-2xl">Description and useful details</summary>
         <div className="mt-5 grid gap-4">
-          <Field defaultValue={product?.shortDescription} label="Short description" name="shortDescription" />
-          <label className="text-sm font-semibold">Full description<textarea className={textarea} defaultValue={product?.description} name="description" /></label>
-          <label className="text-sm font-semibold">Highlights<textarea className={textarea} defaultValue={product?.highlights} name="highlights" /></label>
+          <label className="text-sm font-semibold">
+            Short description
+            <input className={input} name="shortDescription" onChange={(event) => setShortDescription(event.target.value)} value={shortDescription} />
+          </label>
+          <label className="text-sm font-semibold">
+            Full description
+            <textarea className={textarea} name="description" onChange={(event) => setDescription(event.target.value)} value={description} />
+          </label>
+          <label className="text-sm font-semibold">
+            Highlights
+            <textarea className={textarea} name="highlights" onChange={(event) => setHighlights(event.target.value)} value={highlights} />
+          </label>
           <div className="grid gap-4 md:grid-cols-2">
             <Field defaultValue={product?.material} label="Material" name="material" />
             <Field defaultValue={product?.fitDetails} label="Fit details" name="fitDetails" />
