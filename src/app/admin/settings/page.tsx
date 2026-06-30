@@ -1,14 +1,12 @@
 import { AdminShell } from "@/components/admin/admin-shell";
 import { requireAdmin } from "@/lib/admin-auth";
 import { isCloudinaryConfigured } from "@/lib/cloudinary";
-import { isShiprocketCheckoutConfigured } from "@/lib/ecommerce";
 import { isShiprocketShippingConfigured } from "@/lib/shiprocket";
 
 export default async function AdminSettingsPage() {
   await requireAdmin();
   const settings = [
     ["Cloudinary media", isCloudinaryConfigured(), "CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET"],
-    ["Shiprocket Checkout", isShiprocketCheckoutConfigured(), "SHIPROCKET_CHECKOUT_ENABLED, SHIPROCKET_CHECKOUT_API_URL, SHIPROCKET_CHECKOUT_API_KEY"],
     ["Shiprocket Shipping API", isShiprocketShippingConfigured(), "SHIPROCKET_EMAIL, SHIPROCKET_PASSWORD, SHIPROCKET_PICKUP_LOCATION"],
     ["Shiprocket webhooks", Boolean(process.env.SHIPROCKET_WEBHOOK_SECRET), "SHIPROCKET_WEBHOOK_SECRET"],
   ] as const;

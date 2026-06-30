@@ -1,9 +1,23 @@
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 export type CheckoutCartItem = {
   productId: string;
   variantId?: string;
   quantity: number;
+};
+
+export type CheckoutCustomer = {
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  country?: string;
+  paymentMethod?: string;
+  notes?: string;
 };
 
 export async function validateCart(items: CheckoutCartItem[]) {
@@ -53,38 +67,94 @@ export async function validateCart(items: CheckoutCartItem[]) {
   });
 }
 
-export function isShiprocketCheckoutConfigured() {
-  return Boolean(
-    process.env.SHIPROCKET_CHECKOUT_ENABLED === "true" &&
-      process.env.SHIPROCKET_CHECKOUT_API_URL &&
-      process.env.SHIPROCKET_CHECKOUT_API_KEY,
-  );
+function clean(value?: string) {
+  return String(value ?? "").trim();
 }
 
-export async function createCheckoutSession(items: Awaited<ReturnType<typeof validateCart>>) {
-  if (!isShiprocketCheckoutConfigured()) {
-    throw new Error("Shiprocket Checkout is awaiting onboarding credentials.");
+function json(value: unknown) {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
+function makeOrderNumber() {
+  const date = new Date();
+  const stamp = [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("");
+  return `MM-${stamp}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+}
+
+export async function createWebsiteOrder(
+  items: Awaited<ReturnType<typeof validateCart>>,
+  customer: CheckoutCustomer,
+) {
+  if (!items.length) throw new Error("Cart is empty.");
+
+  const details = {
+    name: clean(customer.name),
+    email: clean(customer.email),
+    phone: clean(customer.phone),
+    address: clean(customer.address),
+    city: clean(customer.city),
+    state: clean(customer.state),
+    pincode: clean(customer.pincode),
+    country: clean(customer.country) || "India",
+  };
+
+  if (!details.name || !details.phone || !details.address || !details.city || !details.state || !details.pincode) {
+    throw new Error("Please complete the delivery address.");
   }
-  const response = await fetch(process.env.SHIPROCKET_CHECKOUT_API_URL!, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${process.env.SHIPROCKET_CHECKOUT_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      currency: "INR",
-      items: items.map((item) => ({
-        id: item.variantId || item.productId,
-        product_id: item.productId,
-        name: item.name,
-        variant: item.variantName,
-        sku: item.sku,
-        image: item.imageUrl,
-        quantity: item.quantity,
-        price: item.unitPrice / 100,
-      })),
-      return_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/checkout/success`,
-    }),
-    cache: "no-store",
+
+  if (!/^[1-9][0-9]{5}$/.test(details.pincode)) {
+    throw new Error("Enter a valid 6 digit pincode.");
+  }
+
+  if (!/^[0-9+\-\s()]{8,16}$/.test(details.phone)) {
+    throw new Error("Enter a valid phone number.");
+  }
+
+  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+  const shipping = 0;
+  const total = subtotal + shipping;
+  const address = json(details);
+
+  const order = await prisma.order.create({
+    data: {
+      orderNumber: makeOrderNumber(),
+      status: "pending",
+      paymentStatus: "pending",
+      paymentMethod: clean(customer.paymentMethod) || "COD",
+      subtotal,
+      shipping,
+      total,
+      customerName: details.name,
+      customerEmail: details.email,
+      customerPhone: details.phone,
+      billingAddress: address,
+      shippingAddress: address,
+      notes: clean(customer.notes),
+      items: {
+        create: items.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId ?? null,
+          productName: item.name,
+          variantName: item.variantName,
+          sku: item.sku,
+          imageUrl: item.imageUrl,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          total: item.total,
+        })),
+      },
+    },
+    select: { id: true, orderNumber: true, total: true },
   });
-  const payload = (await response.json().catch(() => null)) as { checkout_url?: string; url?: string; id?: string; message?: string } | null;
-  if (!response.ok || !payload) throw new Error(payload?.message ?? "Shiprocket Checkout could not be started.");
-  return { checkoutId: payload.id ?? "", checkoutUrl: payload.checkout_url ?? payload.url ?? "" };
+
+  return {
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    redirectUrl: `/checkout/success?order=${encodeURIComponent(order.orderNumber)}`,
+    total: order.total,
+  };
 }

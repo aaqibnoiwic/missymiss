@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { verifyWebhookSignature } from "@/lib/webhooks";
+import { verifyWebhookSignature, verifyWebhookToken } from "@/lib/webhooks";
 
 type ShippingPayload = {
   awb?: string;
@@ -19,8 +19,13 @@ function json(value: unknown) {
 
 export async function POST(request: Request) {
   const rawBody = await request.text();
-  if (!verifyWebhookSignature(rawBody, request.headers.get("x-shiprocket-signature"))) {
-    return NextResponse.json({ error: "Invalid webhook signature." }, { status: 401 });
+  const tokenAuthorized = verifyWebhookToken(request.headers.get("x-api-key"));
+  const signatureAuthorized = verifyWebhookSignature(
+    rawBody,
+    request.headers.get("x-shiprocket-signature"),
+  );
+  if (!tokenAuthorized && !signatureAuthorized) {
+    return NextResponse.json({ error: "Invalid webhook authentication." }, { status: 401 });
   }
 
   const payload = JSON.parse(rawBody) as ShippingPayload;

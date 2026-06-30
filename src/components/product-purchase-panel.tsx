@@ -2,8 +2,9 @@
 
 import type { ProductVariant } from "@prisma/client";
 import { Check, Minus, Plus, ShieldCheck, ShoppingBag, Truck, Zap } from "lucide-react";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { useCart } from "@/components/cart-provider";
+import { isShiprocketCheckoutEnabled, openShiprocketCheckout } from "@/lib/shiprocket-checkout-client";
 import { Button } from "@/components/ui/button";
 
 function money(price: number) {
@@ -23,7 +24,6 @@ export function ProductPurchasePanel({
   const [variantId, setVariantId] = useState(available.some((variant) => variant.id === initialVariantId) ? initialVariantId : available.find((variant) => variant.inventory > 0)?.id ?? "");
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
-  const [checkoutError, setCheckoutError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const { addItem } = useCart();
   const selected = available.find((variant) => variant.id === variantId);
@@ -42,13 +42,21 @@ export function ProductPurchasePanel({
     return { lineId: selected?.id ?? `product:${product.id}`, variantId: selected?.id, productId: product.id, slug: product.slug, name: product.name, variantName: selected?.title || [selected?.color, selected?.size].filter(Boolean).join(" / ") || "Standard", sku: selected?.sku || product.sku, imageUrl: product.featuredImage, price, quantity, inventory };
   }
   function add() { if (!canBuy) return; addItem(cartItem()); setAdded(true); window.setTimeout(() => setAdded(false), 1600); }
-  async function buyNow() {
+  async function buyNow(event: MouseEvent<HTMLButtonElement>) {
     if (!canBuy) return;
-    setCheckoutLoading(true); setCheckoutError("");
-    const response = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ productId: product.id, variantId: selected?.id, quantity }] }) });
-    const payload = (await response.json().catch(() => null)) as { checkoutUrl?: string; error?: string } | null;
-    if (!response.ok || !payload?.checkoutUrl) { setCheckoutError(payload?.error ?? "Checkout could not be started."); setCheckoutLoading(false); return; }
-    window.location.assign(payload.checkoutUrl);
+    setCheckoutLoading(true);
+    if (isShiprocketCheckoutEnabled()) {
+      try {
+        const variantId = selected?.id ?? product.id;
+        await openShiprocketCheckout(event, [{ variant_id: variantId, quantity }], `${window.location.origin}/products/${product.slug}`);
+        setCheckoutLoading(false);
+        return;
+      } catch {
+        // Fall back to the on-site cart checkout if Shiprocket Checkout is unavailable.
+      }
+    }
+    addItem(cartItem());
+    window.location.assign("/cart");
   }
 
   return <div className="space-y-5">
@@ -59,7 +67,6 @@ export function ProductPurchasePanel({
     <div className="flex items-center justify-between rounded-2xl border border-[color:var(--color-border)] bg-white/80 p-3"><span className="text-sm font-semibold">Quantity</span><div className="flex items-center gap-3"><button aria-label="Decrease quantity" className="flex size-9 items-center justify-center rounded-full border transition hover:bg-[color:var(--color-paper)]" onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus className="size-4" /></button><strong>{quantity}</strong><button aria-label="Increase quantity" className="flex size-9 items-center justify-center rounded-full border transition hover:bg-[color:var(--color-paper)]" onClick={() => setQuantity(Math.min(inventory, quantity + 1))}><Plus className="size-4" /></button></div></div>
     <div className="grid gap-3 sm:grid-cols-2"><Button disabled={!canBuy} onClick={add} size="lg" variant="outline">{added ? <Check className="size-4" /> : <ShoppingBag className="size-4" />}{added ? "Added to cart" : "Add to cart"}</Button><Button disabled={!canBuy || checkoutLoading} onClick={buyNow} size="lg"><Zap className="size-4" />{checkoutLoading ? "Starting checkout..." : "Buy now"}</Button></div>
     <p className={`text-sm font-semibold ${canBuy ? "text-emerald-700" : "text-red-700"}`}>{canBuy ? `${inventory} in stock` : "Currently sold out"}{selected?.sku || product.sku ? ` · SKU ${selected?.sku || product.sku}` : ""}</p>
-    {checkoutError ? <p className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">{checkoutError}</p> : null}
     <div className="grid gap-2 text-sm text-[color:var(--color-muted-foreground)] sm:grid-cols-2"><p className="flex items-center gap-2"><Truck className="size-4" />Secure tracked delivery</p><p className="flex items-center gap-2"><ShieldCheck className="size-4" />Protected checkout</p></div>
   </div>;
 }

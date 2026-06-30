@@ -2,35 +2,22 @@ import { createHash } from "crypto";
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { verifyWebhookSignature } from "@/lib/webhooks";
+import { verifyCheckoutOrder } from "@/lib/shiprocket-checkout";
+import { verifyWebhookSignature, verifyWebhookToken } from "@/lib/webhooks";
 
 type CheckoutPayload = {
   event?: string;
-  id?: string;
-  order?: {
-    id?: string | number;
-    order_number?: string;
-    status?: string;
-    payment_status?: string;
-    payment_method?: string;
-    currency?: string;
-    subtotal?: number;
-    discount?: number;
-    shipping?: number;
-    total?: number;
-    customer?: { name?: string; email?: string; phone?: string };
-    billing_address?: Record<string, unknown>;
-    shipping_address?: Record<string, unknown>;
-    items?: Array<{
-      id?: string;
-      product_id?: string;
-      name?: string;
-      variant?: string;
-      sku?: string;
-      image?: string;
-      quantity?: number;
-      price?: number;
-    }>;
+  order_id?: string;
+  status?: string;
+  phone?: string;
+  email?: string;
+  name?: string;
+  payment_type?: string;
+  total_amount_payable?: number;
+  billing_address?: Record<string, unknown>;
+  shipping_address?: Record<string, unknown>;
+  cart_data?: {
+    items?: Array<{ variant_id?: string; quantity?: number }>;
   };
 };
 
@@ -42,62 +29,100 @@ function json(value: unknown) {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
+function normalizePaymentMethod(paymentType?: string) {
+  return paymentType?.toUpperCase().includes("COD") || paymentType?.toUpperCase().includes("CASH")
+    ? "COD"
+    : "Prepaid";
+}
+
+// Resolve each checkout line (variant_id can be our ProductVariant id, or the
+// Product id for products without variants) into a persisted order item.
+async function buildOrderItems(items: Array<{ variant_id?: string; quantity?: number }>) {
+  const result: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = [];
+  for (const item of items) {
+    const variantId = String(item.variant_id ?? "").trim();
+    const quantity = Number(item.quantity) > 0 ? Number(item.quantity) : 1;
+    if (!variantId) continue;
+
+    const variant = await prisma.productVariant.findUnique({
+      where: { id: variantId },
+      include: { product: { include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }], take: 1 } } } },
+    });
+    const product = variant
+      ? variant.product
+      : await prisma.product.findUnique({ where: { id: variantId }, include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }], take: 1 } } });
+
+    const unitPrice = variant?.price ?? product?.price ?? 0;
+    result.push({
+      productId: product?.id ?? null,
+      variantId: variant?.id ?? null,
+      productName: product?.name ?? "Product",
+      variantName: variant?.title || [variant?.color, variant?.size].filter(Boolean).join(" / ") || "",
+      sku: variant?.sku || product?.sku || "",
+      imageUrl: product?.featuredImage || product?.images[0]?.imageUrl || "",
+      quantity,
+      unitPrice,
+      total: unitPrice * quantity,
+    });
+  }
+  return result;
+}
+
 export async function POST(request: Request) {
   const rawBody = await request.text();
-  if (!verifyWebhookSignature(rawBody, request.headers.get("x-shiprocket-signature"))) {
-    return NextResponse.json({ error: "Invalid webhook signature." }, { status: 401 });
-  }
-
   const payload = JSON.parse(rawBody) as CheckoutPayload;
-  const order = payload.order;
-  if (!order?.id) {
+  const orderId = payload.order_id;
+  if (!orderId) {
     return NextResponse.json({ error: "Webhook order is missing." }, { status: 400 });
   }
 
+  // Accept the webhook when it carries a valid token/signature, or when the
+  // order can be confirmed directly with Shiprocket (the order webhook itself
+  // is open-access per Shiprocket's guide).
+  const tokenAuthorized = verifyWebhookToken(request.headers.get("x-api-key"));
+  const signatureAuthorized = verifyWebhookSignature(rawBody, request.headers.get("x-shiprocket-signature"));
+  const orderVerified = tokenAuthorized || signatureAuthorized ? true : await verifyCheckoutOrder(orderId);
+  if (!orderVerified) {
+    return NextResponse.json({ error: "Webhook could not be authenticated." }, { status: 401 });
+  }
+
   const eventKey =
-    payload.id ?? createHash("sha256").update(`${payload.event}:${order.id}:${rawBody}`).digest("hex");
-  const existing = await prisma.webhookEvent.findUnique({ where: { eventKey } });
-  if (existing) return NextResponse.json({ received: true, duplicate: true });
+    createHash("sha256").update(`${payload.event ?? "order"}:${orderId}:${rawBody}`).digest("hex");
+  if (await prisma.webhookEvent.findUnique({ where: { eventKey } })) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
+  const isSuccess = payload.status?.toUpperCase() === "SUCCESS";
+  const paymentMethod = normalizePaymentMethod(payload.payment_type);
+  const orderItems = await buildOrderItems(payload.cart_data?.items ?? []);
+  const subtotal = orderItems.reduce((sum, item) => sum + item.total, 0);
+  const total = payload.total_amount_payable != null ? paise(payload.total_amount_payable) : subtotal;
 
   await prisma.$transaction(async (tx) => {
     await tx.order.upsert({
-      where: { orderNumber: order.order_number ?? String(order.id) },
+      where: { orderNumber: orderId },
       create: {
-        orderNumber: order.order_number ?? String(order.id),
-        checkoutOrderId: String(order.id),
-        status: order.status ?? "pending",
-        paymentStatus: order.payment_status ?? "pending",
-        paymentMethod: order.payment_method ?? "",
-        currency: order.currency ?? "INR",
-        subtotal: paise(order.subtotal),
-        discount: paise(order.discount),
-        shipping: paise(order.shipping),
-        total: paise(order.total),
-        customerName: order.customer?.name ?? "",
-        customerEmail: order.customer?.email ?? "",
-        customerPhone: order.customer?.phone ?? "",
-        billingAddress: order.billing_address ? json(order.billing_address) : undefined,
-        shippingAddress: order.shipping_address ? json(order.shipping_address) : undefined,
+        orderNumber: orderId,
+        checkoutOrderId: orderId,
+        status: isSuccess ? "confirmed" : "pending",
+        paymentStatus: isSuccess && paymentMethod === "Prepaid" ? "paid" : "pending",
+        paymentMethod,
+        currency: "INR",
+        subtotal,
+        total,
+        customerName: payload.name ?? "",
+        customerEmail: payload.email ?? "",
+        customerPhone: payload.phone ?? "",
+        billingAddress: payload.billing_address ? json(payload.billing_address) : undefined,
+        shippingAddress: payload.shipping_address ? json(payload.shipping_address) : undefined,
         rawPayload: json(payload),
-        items: {
-          create: (order.items ?? []).map((item) => ({
-            productId: item.product_id || null,
-            variantId: item.id && item.id !== item.product_id ? item.id : null,
-            productName: item.name ?? "Product",
-            variantName: item.variant ?? "",
-            sku: item.sku ?? "",
-            imageUrl: item.image ?? "",
-            quantity: item.quantity ?? 1,
-            unitPrice: paise(item.price),
-            total: paise(item.price) * (item.quantity ?? 1),
-          })),
-        },
+        items: { create: orderItems },
       },
       update: {
-        checkoutOrderId: String(order.id),
-        status: order.status ?? "pending",
-        paymentStatus: order.payment_status ?? "pending",
-        paymentMethod: order.payment_method ?? "",
+        checkoutOrderId: orderId,
+        status: isSuccess ? "confirmed" : "pending",
+        paymentStatus: isSuccess && paymentMethod === "Prepaid" ? "paid" : "pending",
+        paymentMethod,
         rawPayload: json(payload),
       },
     });
@@ -105,7 +130,7 @@ export async function POST(request: Request) {
       data: {
         provider: "shiprocket-checkout",
         eventKey,
-        eventType: payload.event ?? "",
+        eventType: payload.event ?? payload.status ?? "",
         payload: json(payload),
       },
     });

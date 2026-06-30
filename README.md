@@ -9,7 +9,7 @@ Luxury editorial storefront for Missy Miss with:
 - signed image uploads
 - Neon PostgreSQL persistence through Prisma
 - protected admin CMS and media dashboard
-- real product variants, persistent guest cart, and Shiprocket checkout handoff
+- real product variants, persistent guest cart, and native checkout
 - local order records, admin-approved Shiprocket fulfillment, and shipment webhooks
 
 ## Setup
@@ -36,14 +36,14 @@ cp .env.example .env.local
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`
 - `NEXT_PUBLIC_SITE_URL`
-- `SHIPROCKET_CHECKOUT_ENABLED`
-- `SHIPROCKET_CHECKOUT_API_URL`
-- `SHIPROCKET_CHECKOUT_API_KEY`
 - `SHIPROCKET_EMAIL`
 - `SHIPROCKET_PASSWORD`
 - `SHIPROCKET_PICKUP_LOCATION`
 - `SHIPROCKET_PICKUP_POSTCODE`
 - `SHIPROCKET_WEBHOOK_SECRET`
+
+Shiprocket API credentials come from Shiprocket Panel > Settings > API > Create API User.
+Use the API user email/password, not the main Shiprocket login.
 
 4. Start the app:
 
@@ -78,7 +78,7 @@ npm run db:seed
 
 - `/` storefront homepage
 - `/admin/login` minimal admin sign-in
-- `/cart` persistent guest shopping bag and Shiprocket Checkout handoff
+- `/cart` persistent guest shopping bag and checkout form
 - `/admin` protected commerce dashboard
 - `/admin/products` compact product list with dedicated product editors
 - `/admin/orders` compact order list; fulfillment data loads on individual orders
@@ -96,5 +96,5 @@ npm run db:seed
 
 - Uploaded media metadata is normalized by the API and saved to Neon.
 - Pages, banners, categories, products, testimonials, gallery images, and SEO fields are managed from Neon-backed admin forms.
-- Shiprocket Checkout stays disabled until onboarding credentials are supplied.
-- Configure Shiprocket Checkout and Shipping webhooks to post to `/api/webhooks/shiprocket-checkout` and `/api/webhooks/shiprocket-shipping` with an `x-shiprocket-signature` HMAC-SHA256 header.
+- Orders are saved locally first, then admin can approve them for Shiprocket from `/admin/orders/[id]`.
+- Configure Shiprocket Shipping webhooks to post to `/api/webhooks/shiprocket-shipping` with an `x-shiprocket-signature` HMAC-SHA256 header.

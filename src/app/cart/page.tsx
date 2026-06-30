@@ -3,36 +3,74 @@
 import { ArrowRight, Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type FormEvent, type MouseEvent } from "react";
 import { useCart } from "@/components/cart-provider";
+import { isShiprocketCheckoutEnabled, openShiprocketCheckout } from "@/lib/shiprocket-checkout-client";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
+import { Input } from "@/components/ui/input";
 
 function money(price: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(price / 100);
 }
 
 export default function CartPage() {
-  const { items, removeItem, setQuantity } = useCart();
+  const { clear, items, removeItem, setQuantity } = useCart();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [expressLoading, setExpressLoading] = useState(false);
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const expressCheckoutAvailable = isShiprocketCheckoutEnabled();
 
-  async function checkout() {
+  async function expressCheckout(event: MouseEvent<HTMLButtonElement>) {
+    if (!items.length) return;
+    setExpressLoading(true);
+    setError("");
+    try {
+      await openShiprocketCheckout(
+        event,
+        items.map((item) => ({ variant_id: item.variantId ?? item.productId, quantity: item.quantity })),
+        `${window.location.origin}/cart`,
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Express checkout could not be started.");
+    } finally {
+      setExpressLoading(false);
+    }
+  }
+
+  async function checkout(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setLoading(true);
     setError("");
+    const formData = new FormData(event.currentTarget);
     const response = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: items.map(({ productId, variantId, quantity }) => ({ productId, variantId, quantity })) }),
+      body: JSON.stringify({
+        items: items.map(({ productId, variantId, quantity }) => ({ productId, variantId, quantity })),
+        customer: {
+          name: formData.get("name"),
+          email: formData.get("email"),
+          phone: formData.get("phone"),
+          address: formData.get("address"),
+          city: formData.get("city"),
+          state: formData.get("state"),
+          pincode: formData.get("pincode"),
+          country: "India",
+          paymentMethod: formData.get("paymentMethod"),
+          notes: formData.get("notes"),
+        },
+      }),
     });
-    const payload = (await response.json()) as { checkoutUrl?: string; error?: string };
-    if (!response.ok || !payload.checkoutUrl) {
-      setError(payload.error ?? "Checkout could not be started.");
+    const payload = (await response.json()) as { redirectUrl?: string; error?: string };
+    if (!response.ok || !payload.redirectUrl) {
+      setError(payload.error ?? "Order could not be placed.");
       setLoading(false);
       return;
     }
-    window.location.assign(payload.checkoutUrl);
+    clear();
+    window.location.assign(payload.redirectUrl);
   }
 
   return (
@@ -67,11 +105,36 @@ export default function CartPage() {
             ))}
           </div>
           <aside className="h-fit rounded-[2rem] border border-[color:var(--color-border)] bg-[color:var(--color-charcoal)] p-6 text-white lg:sticky lg:top-28">
-            <p className="text-xs font-bold uppercase tracking-[.25em] text-white/55">Order summary</p>
-            <div className="my-6 flex justify-between border-b border-white/15 pb-6"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
-            <p className="mb-5 text-sm leading-6 text-white/65">Shipping, address, payment, and delivery estimate continue securely with Shiprocket Checkout.</p>
-            <Button className="w-full" disabled={loading} onClick={checkout} size="lg">{loading ? "Starting checkout..." : "Secure checkout"} <ArrowRight className="size-4" /></Button>
-            {error ? <p className="mt-4 rounded-2xl bg-white/10 p-3 text-sm text-white/80">{error}</p> : null}
+            {expressCheckoutAvailable ? (
+              <div className="mb-4 space-y-3">
+                <Button className="w-full" disabled={expressLoading || !items.length} onClick={expressCheckout} size="lg" type="button">
+                  {expressLoading ? "Opening checkout..." : "Express checkout"} <ArrowRight className="size-4" />
+                </Button>
+                <div className="flex items-center gap-3 text-xs uppercase tracking-[.25em] text-white/45">
+                  <span className="h-px flex-1 bg-white/15" />or<span className="h-px flex-1 bg-white/15" />
+                </div>
+              </div>
+            ) : null}
+            <form className="space-y-4" onSubmit={checkout}>
+              <p className="text-xs font-bold uppercase tracking-[.25em] text-white/55">Delivery details</p>
+              <div className="flex justify-between border-b border-white/15 pb-5"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
+              <Input autoComplete="name" className="border-white/15 bg-white text-[color:var(--color-charcoal)]" name="name" placeholder="Full name" required />
+              <Input autoComplete="tel" className="border-white/15 bg-white text-[color:var(--color-charcoal)]" inputMode="tel" name="phone" placeholder="Phone" required />
+              <Input autoComplete="email" className="border-white/15 bg-white text-[color:var(--color-charcoal)]" name="email" placeholder="Email" type="email" />
+              <Input autoComplete="street-address" className="border-white/15 bg-white text-[color:var(--color-charcoal)]" name="address" placeholder="Address" required />
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                <Input autoComplete="address-level2" className="border-white/15 bg-white text-[color:var(--color-charcoal)]" name="city" placeholder="City" required />
+                <Input autoComplete="address-level1" className="border-white/15 bg-white text-[color:var(--color-charcoal)]" name="state" placeholder="State" required />
+              </div>
+              <Input autoComplete="postal-code" className="border-white/15 bg-white text-[color:var(--color-charcoal)]" inputMode="numeric" maxLength={6} name="pincode" placeholder="Pincode" required />
+              <select className="h-12 w-full rounded-2xl border border-white/15 bg-white px-4 text-sm text-[color:var(--color-charcoal)] outline-none" name="paymentMethod" defaultValue="COD">
+                <option value="COD">Cash on delivery</option>
+                <option value="Prepaid">Prepaid</option>
+              </select>
+              <Input className="border-white/15 bg-white text-[color:var(--color-charcoal)]" name="notes" placeholder="Order note" />
+              <Button className="w-full" disabled={loading} size="lg" type="submit">{loading ? "Placing order..." : "Place order"} <ArrowRight className="size-4" /></Button>
+              {error ? <p className="rounded-2xl bg-white/10 p-3 text-sm text-white/80">{error}</p> : null}
+            </form>
           </aside>
         </div>
       )}
