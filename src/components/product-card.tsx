@@ -4,10 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Product, ProductImage, ProductVariant } from "@prisma/client";
 import { Check, ShoppingBag, Zap } from "lucide-react";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { useCart } from "@/components/cart-provider";
+import { isShiprocketCheckoutEnabled, openShiprocketCheckout } from "@/lib/shiprocket-checkout-client";
 import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/components/ui/button-variants";
 
 type ProductCardProps = {
   product: Product & { images?: ProductImage[]; variants?: ProductVariant[] };
@@ -22,11 +22,13 @@ export function ProductCard({ product }: ProductCardProps) {
   const available = product.variants?.filter((variant) => variant.isEnabled) ?? [];
   const [variantId, setVariantId] = useState("");
   const [added, setAdded] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const { addItem } = useCart();
   const selected = available.find((variant) => variant.id === variantId);
   const inventory = selected?.inventory ?? product.inventory;
   const price = selected?.price ?? product.price;
   const canAdd = available.length ? Boolean(selected && selected.inventory > 0) : product.inventory > 0;
+  const productUrl = `/products/${product.slug}${selected ? `?variant=${selected.id}` : ""}`;
 
   function add() {
     if (!canAdd) return;
@@ -47,6 +49,28 @@ export function ProductCard({ product }: ProductCardProps) {
     window.setTimeout(() => setAdded(false), 1400);
   }
 
+  async function buyNow(event: MouseEvent<HTMLButtonElement>) {
+    if (!canAdd) return;
+
+    if (isShiprocketCheckoutEnabled()) {
+      try {
+        setCheckoutLoading(true);
+        await openShiprocketCheckout(
+          event,
+          [{ variant_id: selected?.id ?? product.id, quantity: 1 }],
+          `${window.location.origin}${productUrl}`,
+        );
+        return;
+      } catch {
+        // If checkout script or token creation fails, fall back to the detail page.
+      } finally {
+        setCheckoutLoading(false);
+      }
+    }
+
+    window.location.assign(productUrl);
+  }
+
   return (
     <article className="group overflow-hidden rounded-[2rem] border border-[color:var(--color-border)] bg-white/88 shadow-[0_16px_45px_rgba(116,94,56,0.07)] transition duration-300 hover:-translate-y-1 hover:border-[color:var(--color-gold-deep)]/40 hover:shadow-[0_26px_70px_rgba(116,94,56,0.16)] focus-within:border-[color:var(--color-gold-deep)]">
       <Link className="relative block h-72 overflow-hidden bg-[color:var(--color-paper)]" href={`/products/${product.slug}${selected ? `?variant=${selected.id}` : ""}`}>
@@ -65,7 +89,7 @@ export function ProductCard({ product }: ProductCardProps) {
         {available.length ? <select aria-label={`Choose option for ${product.name}`} className="h-10 w-full rounded-xl border border-[color:var(--color-border-strong)] bg-white px-3 text-sm outline-none focus:border-[color:var(--color-gold-deep)]" onChange={(event) => setVariantId(event.target.value)} value={variantId}><option value="">Choose size / color</option>{available.map((variant) => <option disabled={variant.inventory < 1} key={variant.id} value={variant.id}>{variant.title || [variant.color, variant.size].filter(Boolean).join(" / ")}{variant.inventory < 1 ? " - Sold out" : ""}</option>)}</select> : null}
         <div className="grid grid-cols-2 gap-2">
           <Button disabled={!canAdd} onClick={add} size="sm" type="button" variant="outline">{added ? <Check className="size-4" /> : <ShoppingBag className="size-4" />}{added ? "Added" : "Add to cart"}</Button>
-          <Link className={buttonVariants({ size: "sm", className: !canAdd ? "pointer-events-none opacity-50" : "" })} href={`/products/${product.slug}${selected ? `?variant=${selected.id}` : ""}`}><Zap className="size-4" />Buy now</Link>
+          <Button disabled={!canAdd || checkoutLoading} onClick={buyNow} size="sm" type="button">{checkoutLoading ? "Starting..." : <><Zap className="size-4" />Buy now</>}</Button>
         </div>
       </div>
     </article>

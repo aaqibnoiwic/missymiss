@@ -37,9 +37,19 @@ export function parsePagination(searchParams: URLSearchParams) {
   return { page, limit, skip: (page - 1) * limit };
 }
 
-function paginationMeta(page: number, limit: number, total: number) {
-  const totalPages = limit > 0 ? Math.ceil(total / limit) : 0;
-  return { page, limit, total, total_pages: totalPages, has_next: page < totalPages };
+function tagsForProduct(product: ProductWithRelations) {
+  return [
+    ...product.categories.map((entry) => entry.category.title).filter(Boolean),
+    ...product.colors.split(",").map((value) => value.trim()).filter(Boolean),
+    ...product.sizes.split(",").map((value) => value.trim()).filter(Boolean),
+  ].join(", ");
+}
+
+function optionValuesForVariant(variant: ProductWithRelations["variants"][number]) {
+  const optionValues: Record<string, string> = {};
+  if (variant.color) optionValues.Color = variant.color;
+  if (variant.size) optionValues.Size = variant.size;
+  return optionValues;
 }
 
 function serializeProduct(product: ProductWithRelations) {
@@ -54,9 +64,13 @@ function serializeProduct(product: ProductWithRelations) {
         id: variant.id,
         title: variant.title || [variant.color, variant.size].filter(Boolean).join(" / ") || "Default",
         price: rupees(variant.price),
-        quantity: variant.inventory,
+        compare_at_price: product.compareAtPrice ? rupees(product.compareAtPrice) : null,
         sku: variant.sku || product.sku || "",
+        quantity: variant.inventory,
+        created_at: isoOrEmpty(variant.createdAt),
         updated_at: isoOrEmpty(variant.updatedAt),
+        taxable: true,
+        option_values: optionValuesForVariant(variant),
         image: { src: featuredImage },
         weight: kilograms(variant.weight),
       }))
@@ -67,9 +81,13 @@ function serializeProduct(product: ProductWithRelations) {
           id: product.id,
           title: "Default",
           price: rupees(product.price),
-          quantity: product.inventory,
+          compare_at_price: product.compareAtPrice ? rupees(product.compareAtPrice) : null,
           sku: product.sku || "",
+          quantity: product.inventory,
+          created_at: isoOrEmpty(product.createdAt),
           updated_at: isoOrEmpty(product.updatedAt),
+          taxable: true,
+          option_values: {},
           image: { src: featuredImage },
           weight: 0,
         },
@@ -81,9 +99,11 @@ function serializeProduct(product: ProductWithRelations) {
     body_html: product.description || product.shortDescription || "",
     vendor: VENDOR,
     product_type: product.categories[0]?.category.title || "",
-    updated_at: isoOrEmpty(product.updatedAt),
-    status: product.isPublished ? "active" : "draft",
+    created_at: isoOrEmpty(product.createdAt),
     handle: product.slug,
+    updated_at: isoOrEmpty(product.updatedAt),
+    tags: tagsForProduct(product),
+    status: product.isPublished ? "active" : "draft",
     variants,
     image: { src: featuredImage },
   };
@@ -92,10 +112,10 @@ function serializeProduct(product: ProductWithRelations) {
 export function serializeCollection(category: CategoryRecord) {
   return {
     id: category.id,
-    updated_at: isoOrEmpty(category.updatedAt),
     title: category.title,
     body_html: category.description || "",
     handle: category.slug,
+    updated_at: isoOrEmpty(category.updatedAt),
     image: { src: category.imageUrl || "" },
   };
 }
@@ -119,8 +139,10 @@ export async function fetchProductCatalog(page: number, limit: number, skip: num
   ]);
 
   return {
-    data: products.map(serializeProduct),
-    meta: paginationMeta(page, limit, total),
+    data: {
+      total,
+      products: products.map(serializeProduct),
+    },
   };
 }
 
@@ -146,8 +168,10 @@ export async function fetchProductsByCollection(
   ]);
 
   return {
-    data: products.map(serializeProduct),
-    meta: paginationMeta(page, limit, total),
+    data: {
+      total,
+      products: products.map(serializeProduct),
+    },
   };
 }
 
@@ -163,7 +187,9 @@ export async function fetchCollectionCatalog(page: number, limit: number, skip: 
   ]);
 
   return {
-    data: categories.map(serializeCollection),
-    meta: paginationMeta(page, limit, total),
+    data: {
+      total,
+      collections: categories.map(serializeCollection),
+    },
   };
 }
