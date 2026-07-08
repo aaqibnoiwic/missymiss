@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createCheckoutAccessToken } from "@/lib/shiprocket-checkout";
+import { toShiprocketNumericId } from "@/lib/shiprocket-id";
 
 type IncomingItem = { variant_id?: string; quantity?: number };
 
@@ -18,7 +19,11 @@ function sanitizeItems(items: IncomingItem[]) {
     }))
     .filter(
       (item) => item.variant_id && Number.isInteger(item.quantity) && item.quantity > 0 && item.quantity <= 50,
-    );
+    )
+    .map((item) => ({
+      ...item,
+      variant_id: String(toShiprocketNumericId(item.variant_id)),
+    }));
   return cleaned;
 }
 

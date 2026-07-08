@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { resolveShiprocketCollectionId, toShiprocketNumericId } from "@/lib/shiprocket-id";
 
 // Schema mirrors the Shopify-like product/collection shape Shiprocket Checkout
 // expects for custom-site catalog sync (see SR Checkout Integration Guide).
@@ -52,7 +53,7 @@ function optionValuesForVariant(variant: ProductWithRelations["variants"][number
   return optionValues;
 }
 
-function serializeProduct(product: ProductWithRelations) {
+export function serializeProduct(product: ProductWithRelations) {
   const featuredImage =
     product.featuredImage ||
     product.images.find((image) => image.isFeatured)?.imageUrl ||
@@ -61,7 +62,7 @@ function serializeProduct(product: ProductWithRelations) {
 
   const variants = product.variants.length
     ? product.variants.map((variant) => ({
-        id: variant.id,
+        id: toShiprocketNumericId(variant.id),
         title: variant.title || [variant.color, variant.size].filter(Boolean).join(" / ") || "Default",
         price: rupees(variant.price),
         compare_at_price: product.compareAtPrice ? rupees(product.compareAtPrice) : null,
@@ -78,7 +79,7 @@ function serializeProduct(product: ProductWithRelations) {
         {
           // Products without variants expose a single default variant so the
           // checkout cart_data can reference a concrete variant_id.
-          id: product.id,
+          id: toShiprocketNumericId(product.id),
           title: "Default",
           price: rupees(product.price),
           compare_at_price: product.compareAtPrice ? rupees(product.compareAtPrice) : null,
@@ -94,7 +95,7 @@ function serializeProduct(product: ProductWithRelations) {
       ];
 
   return {
-    id: product.id,
+    id: toShiprocketNumericId(product.id),
     title: product.name,
     body_html: product.description || product.shortDescription || "",
     vendor: VENDOR,
@@ -111,12 +112,13 @@ function serializeProduct(product: ProductWithRelations) {
 
 export function serializeCollection(category: CategoryRecord) {
   return {
-    id: category.id,
+    id: toShiprocketNumericId(category.id),
     title: category.title,
     body_html: category.description || "",
     handle: category.slug,
-    updated_at: isoOrEmpty(category.updatedAt),
     image: { src: category.imageUrl || "" },
+    created_at: isoOrEmpty(category.createdAt),
+    updated_at: isoOrEmpty(category.updatedAt),
   };
 }
 
@@ -152,9 +154,19 @@ export async function fetchProductsByCollection(
   limit: number,
   skip: number,
 ) {
+  const resolvedCollectionId = await resolveShiprocketCollectionId(collectionId);
+  if (!resolvedCollectionId) {
+    return {
+      data: {
+        total: 0,
+        products: [],
+      },
+    };
+  }
+
   const where = {
     isPublished: true,
-    categories: { some: { categoryId: collectionId } },
+    categories: { some: { categoryId: resolvedCollectionId } },
   };
   const [products, total] = await Promise.all([
     prisma.product.findMany({
@@ -192,4 +204,21 @@ export async function fetchCollectionCatalog(page: number, limit: number, skip: 
       collections: categories.map(serializeCollection),
     },
   };
+}
+
+export async function fetchShiprocketProduct(productId: string) {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    include: productInclude,
+  });
+
+  return product ? serializeProduct(product) : null;
+}
+
+export async function fetchShiprocketCollection(collectionId: string) {
+  const category = await prisma.category.findUnique({
+    where: { id: collectionId },
+  });
+
+  return category ? serializeCollection(category) : null;
 }

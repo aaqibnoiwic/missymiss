@@ -11,6 +11,11 @@ import {
   createShiprocketOrder,
   schedulePickup,
 } from "@/lib/shiprocket";
+import {
+  syncCollectionCatalogAndProductsToShiprocket,
+  syncCollectionsToShiprocket,
+  syncProductCatalogToShiprocket,
+} from "@/lib/shiprocket-catalog-sync";
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -242,6 +247,14 @@ export async function saveProductEditor(
   };
 
   try {
+    const previousCategoryIds = id
+      ? (
+          await prisma.productCategory.findMany({
+            where: { productId: id },
+            select: { categoryId: true },
+          })
+        ).map((entry) => entry.categoryId)
+      : [];
     const product = id
       ? await prisma.product.update({ where: { id }, data })
       : await prisma.product.create({ data });
@@ -333,6 +346,7 @@ export async function saveProductEditor(
     }
 
     await prisma.$transaction(syncQueries);
+    await syncProductCatalogToShiprocket(product.id, [...new Set([...previousCategoryIds, ...categoryIds])]);
 
     refreshCms();
     revalidatePath("/admin/products");
@@ -417,11 +431,11 @@ export async function saveCategory(formData: FormData) {
 
   if (!data.slug || !data.title) return;
 
-  if (id) {
-    await prisma.category.update({ where: { id }, data });
-  } else {
-    await prisma.category.create({ data });
-  }
+  const category = id
+    ? await prisma.category.update({ where: { id }, data })
+    : await prisma.category.create({ data });
+
+  await syncCollectionCatalogAndProductsToShiprocket(category.id);
 
   refreshCms();
 }
@@ -542,6 +556,15 @@ export async function saveProduct(formData: FormData) {
 
   if (!data.slug || !data.name || data.price < 0 || (data.compareAtPrice !== null && data.compareAtPrice < 0)) return;
 
+  const previousCategoryIds = id
+    ? (
+        await prisma.productCategory.findMany({
+          where: { productId: id },
+          select: { categoryId: true },
+        })
+      ).map((entry) => entry.categoryId)
+    : [];
+
   const product = id
     ? await prisma.product.update({ where: { id }, data })
     : await prisma.product.create({ data });
@@ -559,6 +582,10 @@ export async function saveProduct(formData: FormData) {
     }
   }
 
+  await syncProductCatalogToShiprocket(
+    product.id,
+    formData.has("manageCategories") ? [...new Set([...previousCategoryIds, ...categoryIds])] : undefined,
+  );
   refreshCms();
 }
 
@@ -566,7 +593,14 @@ export async function deleteProduct(formData: FormData) {
   await requireAdmin();
   const id = text(formData, "id");
   if (!id) return;
+  const categoryIds = (
+    await prisma.productCategory.findMany({
+      where: { productId: id },
+      select: { categoryId: true },
+    })
+  ).map((entry) => entry.categoryId);
   await prisma.product.delete({ where: { id } });
+  await syncCollectionsToShiprocket(categoryIds);
   refreshCms();
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}`);
@@ -588,6 +622,7 @@ export async function saveProductImage(formData: FormData) {
     },
   });
 
+  await syncProductCatalogToShiprocket(productId);
   refreshCms();
 }
 
@@ -595,7 +630,11 @@ export async function deleteProductImage(formData: FormData) {
   await requireAdmin();
   const id = text(formData, "id");
   if (!id) return;
-  await prisma.productImage.delete({ where: { id } });
+  const image = await prisma.productImage.delete({
+    where: { id },
+    select: { productId: true },
+  });
+  await syncProductCatalogToShiprocket(image.productId);
   refreshCms();
 }
 
@@ -644,6 +683,7 @@ export async function saveProductVariant(formData: FormData) {
   if (!productId || !data.sku || data.price < 0) return;
   if (id) await prisma.productVariant.update({ where: { id }, data });
   else await prisma.productVariant.create({ data });
+  await syncProductCatalogToShiprocket(productId);
   refreshCms();
   revalidatePath("/admin/products");
 }
@@ -651,7 +691,13 @@ export async function saveProductVariant(formData: FormData) {
 export async function deleteProductVariant(formData: FormData) {
   await requireAdmin();
   const id = text(formData, "id");
-  if (id) await prisma.productVariant.delete({ where: { id } });
+  if (id) {
+    const variant = await prisma.productVariant.delete({
+      where: { id },
+      select: { productId: true },
+    });
+    await syncProductCatalogToShiprocket(variant.productId);
+  }
   refreshCms();
   revalidatePath("/admin/products");
 }

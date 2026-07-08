@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { resolveShiprocketProductId, resolveShiprocketVariantId } from "@/lib/shiprocket-id";
 import { verifyCheckoutOrder } from "@/lib/shiprocket-checkout";
 import { verifyWebhookSignature, verifyWebhookToken } from "@/lib/webhooks";
 
@@ -40,17 +41,27 @@ function normalizePaymentMethod(paymentType?: string) {
 async function buildOrderItems(items: Array<{ variant_id?: string; quantity?: number }>) {
   const result: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = [];
   for (const item of items) {
-    const variantId = String(item.variant_id ?? "").trim();
+    const externalVariantId = String(item.variant_id ?? "").trim();
     const quantity = Number(item.quantity) > 0 ? Number(item.quantity) : 1;
-    if (!variantId) continue;
+    if (!externalVariantId) continue;
 
-    const variant = await prisma.productVariant.findUnique({
-      where: { id: variantId },
-      include: { product: { include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }], take: 1 } } } },
-    });
+    const variantId = await resolveShiprocketVariantId(externalVariantId);
+    const productId = variantId ? null : await resolveShiprocketProductId(externalVariantId);
+
+    const variant = variantId
+      ? await prisma.productVariant.findUnique({
+          where: { id: variantId },
+          include: { product: { include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }], take: 1 } } } },
+        })
+      : null;
     const product = variant
       ? variant.product
-      : await prisma.product.findUnique({ where: { id: variantId }, include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }], take: 1 } } });
+      : productId
+        ? await prisma.product.findUnique({
+            where: { id: productId },
+            include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }], take: 1 } },
+          })
+        : null;
 
     const unitPrice = variant?.price ?? product?.price ?? 0;
     result.push({
