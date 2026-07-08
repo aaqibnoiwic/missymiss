@@ -11,6 +11,10 @@ function resolveRedirectUrl(request: NextRequest) {
   return new URL("/checkout/success", base).toString();
 }
 
+function numericVariantId(value: string) {
+  return /^\d+$/.test(value) ? value : String(toShiprocketNumericId(value));
+}
+
 function sanitizeItems(items: IncomingItem[]) {
   const cleaned = items
     .map((item) => ({
@@ -22,7 +26,7 @@ function sanitizeItems(items: IncomingItem[]) {
     )
     .map((item) => ({
       ...item,
-      variant_id: String(toShiprocketNumericId(item.variant_id)),
+      variant_id: numericVariantId(item.variant_id),
     }));
   return cleaned;
 }

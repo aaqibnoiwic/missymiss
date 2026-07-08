@@ -26,6 +26,10 @@ function kilograms(grams: number) {
   return Number((grams / 1000).toFixed(3));
 }
 
+function fallbackSku(prefix: string, id: string) {
+  return `${prefix}-${toShiprocketNumericId(id)}`;
+}
+
 function isoOrEmpty(date: Date | null | undefined) {
   return date ? date.toISOString() : "";
 }
@@ -66,14 +70,16 @@ export function serializeProduct(product: ProductWithRelations) {
         title: variant.title || [variant.color, variant.size].filter(Boolean).join(" / ") || "Default",
         price: rupees(variant.price),
         compare_at_price: product.compareAtPrice ? rupees(product.compareAtPrice) : null,
-        sku: variant.sku || product.sku || "",
+        sku: variant.sku || product.sku || fallbackSku("MMV", variant.id),
         quantity: variant.inventory,
         created_at: isoOrEmpty(variant.createdAt),
         updated_at: isoOrEmpty(variant.updatedAt),
         taxable: true,
+        grams: variant.weight,
         option_values: optionValuesForVariant(variant),
         image: { src: featuredImage },
         weight: kilograms(variant.weight),
+        weight_unit: "kg",
       }))
     : [
         {
@@ -83,14 +89,16 @@ export function serializeProduct(product: ProductWithRelations) {
           title: "Default",
           price: rupees(product.price),
           compare_at_price: product.compareAtPrice ? rupees(product.compareAtPrice) : null,
-          sku: product.sku || "",
+          sku: product.sku || fallbackSku("MMP", product.id),
           quantity: product.inventory,
           created_at: isoOrEmpty(product.createdAt),
           updated_at: isoOrEmpty(product.updatedAt),
           taxable: true,
+          grams: 0,
           option_values: {},
           image: { src: featuredImage },
           weight: 0,
+          weight_unit: "kg",
         },
       ];
 
