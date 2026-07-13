@@ -109,7 +109,7 @@ export function StorefrontHeader({ categories }: { categories: CategoryLink[] })
       items: categories.filter((item) => item.collectionType === "reclaimed-thread"),
     },
   ].filter((group) => group.items.length);
-  return <header className="sticky top-0 z-50 border-b border-[color:var(--color-border)] bg-[rgba(250,249,246,0.9)] backdrop-blur-xl">
+  return <header className="sticky top-0 z-50 border-b border-[color:var(--color-border)] bg-[rgba(250,249,246,0.9)] backdrop-blur-xl" data-storefront-header="true">
     <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 md:px-10 lg:px-16">
       <Link className="flex items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-gold-deep)]" href="/"><BrandLogo className="w-11" variant="symbol" /><div className="hidden sm:block"><p className="font-display text-xl leading-none">Missy Miss</p><p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-[color:var(--color-muted-foreground)]">Luxury Fashion</p></div></Link>
       <nav className="hidden items-center gap-1 text-sm font-medium text-[color:var(--color-muted-foreground)] lg:flex">

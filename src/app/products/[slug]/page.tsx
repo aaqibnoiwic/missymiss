@@ -2,9 +2,11 @@ import { Leaf, Sparkles, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ProductColorImageProvider } from "@/components/product-color-image-context";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductPurchasePanel } from "@/components/product-purchase-panel";
 import { ProductCard } from "@/components/product-card";
+import { SizeChartModal } from "@/components/size-chart-modal";
 import { prisma } from "@/lib/db";
 
 type PageProps = {
@@ -65,6 +67,10 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   return (
     <main>
+      <ProductColorImageProvider
+        colorOptions={product.colorGuideOptions.map(({ name, imageUrl }) => ({ name, imageUrl }))}
+        initialColor={product.variants.find((item) => item.id === variant)?.color || product.colors.split(",")[0]?.trim() || ""}
+      >
       <section className="mx-auto grid max-w-7xl gap-12 px-6 py-12 md:px-10 lg:grid-cols-[1.05fr_.95fr] lg:px-16 lg:py-16">
         <ProductGallery images={images} productName={product.name} />
         <div className="space-y-7 lg:sticky lg:top-28 lg:h-fit">
@@ -93,11 +99,13 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             </div>
           ) : null}
           <ProductPurchasePanel initialVariantId={variant} product={product} variants={product.variants} />
+          <SizeChartModal />
           <div className="rounded-[2rem] border border-[color:var(--color-border)] bg-white/80 p-6">
             <p className="leading-8 text-[color:var(--color-muted-foreground)]">{product.description}</p>
           </div>
         </div>
       </section>
+      </ProductColorImageProvider>
 
       {product.sizeGuideRows.length || product.colorGuideOptions.length ? (
         <section className="mx-auto grid max-w-7xl gap-5 px-6 pb-16 md:px-10 lg:grid-cols-[1.1fr_.9fr] lg:px-16">

@@ -6,6 +6,31 @@ export type CheckoutCartData = {
   items: Array<{ variant_id: string; quantity: number }>;
 };
 
+export type ShiprocketCheckoutOrder = {
+  order_id?: string;
+  cart_data?: {
+    items?: Array<{ variant_id?: string; quantity?: number }>;
+  };
+  redirect_url?: string;
+  status?: string;
+  source?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  shipping_plan?: string | null;
+  shipping_address?: Record<string, unknown> | null;
+  billing_address?: Record<string, unknown> | null;
+  payment_type?: string | null;
+  payment_status?: string | null;
+  coupon_codes?: string[] | null;
+  coupon_discount?: number | null;
+  prepaid_discount?: number | null;
+  total_discount?: number | null;
+  cod_charges?: number | null;
+  subtotal_price?: number | null;
+  total_amount_payable?: number | null;
+  platform_order_id?: string | null;
+};
+
 export function isShiprocketCheckoutConfigured() {
   return Boolean(
     process.env.SHIPROCKET_CHECKOUT_API_KEY && process.env.SHIPROCKET_CHECKOUT_SECRET_KEY,
@@ -64,23 +89,31 @@ export async function createCheckoutAccessToken(cartData: CheckoutCartData, redi
 
 // Used to verify an inbound order webhook is genuine by calling back to
 // Shiprocket with the order_id, rather than trusting the open webhook payload.
-export async function verifyCheckoutOrder(orderId: string) {
-  if (!isShiprocketCheckoutConfigured() || !orderId) return false;
+export async function fetchCheckoutOrderDetails(orderId: string) {
+  if (!isShiprocketCheckoutConfigured() || !orderId) return null;
 
   const body = JSON.stringify({ order_id: orderId, timestamp: new Date().toISOString() });
-  try {
-    const response = await fetch(`${checkoutBase()}/api/v1/custom-platform-order/details`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Api-Key": process.env.SHIPROCKET_CHECKOUT_API_KEY ?? "",
-        "X-Api-HMAC-SHA256": signBody(body),
-      },
-      body,
-      cache: "no-store",
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
+  const response = await fetch(`${checkoutBase()}/api/v1/custom-platform-order/details`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Api-Key": process.env.SHIPROCKET_CHECKOUT_API_KEY ?? "",
+      "X-Api-HMAC-SHA256": signBody(body),
+    },
+    body,
+    cache: "no-store",
+  });
+
+  if (!response.ok) return null;
+
+  const payload = (await response.json().catch(() => null)) as
+    | { result?: ShiprocketCheckoutOrder }
+    | null;
+  return payload?.result ?? null;
+}
+
+// Used to verify an inbound order webhook is genuine by calling back to
+// Shiprocket with the order_id, rather than trusting the open webhook payload.
+export async function verifyCheckoutOrder(orderId: string) {
+  return Boolean(await fetchCheckoutOrderDetails(orderId));
 }

@@ -24,6 +24,42 @@ export function isShiprocketCheckoutEnabled() {
 }
 
 let scriptPromise: Promise<HeadlessCheckoutApi> | null = null;
+let stylesPromise: Promise<void> | null = null;
+
+function loadHeadlessCheckoutStyles() {
+  if (typeof window === "undefined") {
+    return Promise.reject(new Error("Checkout can only run in the browser."));
+  }
+
+  const href = process.env.NEXT_PUBLIC_SHIPROCKET_CHECKOUT_STYLES;
+  if (!href) return Promise.resolve();
+
+  if (!stylesPromise) {
+    stylesPromise = new Promise<void>((resolve, reject) => {
+      const existing = document.querySelector<HTMLLinkElement>(`link[href="${href}"]`);
+      if (existing) {
+        if (existing.sheet) resolve();
+        else {
+          existing.addEventListener("load", () => resolve(), { once: true });
+          existing.addEventListener("error", () => reject(new Error("Shiprocket Checkout styles failed to load.")), { once: true });
+        }
+        return;
+      }
+
+      const link = document.createElement("link");
+      link.href = href;
+      link.rel = "stylesheet";
+      link.addEventListener("load", () => resolve(), { once: true });
+      link.addEventListener("error", () => {
+        stylesPromise = null;
+        reject(new Error("Shiprocket Checkout styles failed to load."));
+      }, { once: true });
+      document.head.appendChild(link);
+    });
+  }
+
+  return stylesPromise;
+}
 
 function loadHeadlessCheckout() {
   if (typeof window === "undefined") {
@@ -79,6 +115,12 @@ export async function openShiprocketCheckout(
   items: CheckoutLineItem[],
   fallbackUrl: string,
 ) {
-  const [api, token] = await Promise.all([loadHeadlessCheckout(), fetchCheckoutToken(items)]);
+  const [api, token] = await Promise.all([
+    loadHeadlessCheckout().then(async (checkoutApi) => {
+      await loadHeadlessCheckoutStyles();
+      return checkoutApi;
+    }),
+    fetchCheckoutToken(items),
+  ]);
   api.addToCart(event, token, { fallbackUrl });
 }

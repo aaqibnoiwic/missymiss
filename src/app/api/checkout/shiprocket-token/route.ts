@@ -7,7 +7,8 @@ type IncomingItem = { variant_id?: string; quantity?: number };
 // Redirect URL is built server-side from a trusted origin to avoid open-redirect
 // injection from client-supplied values.
 function resolveRedirectUrl(request: NextRequest) {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
+  const isLocal = ["localhost", "127.0.0.1", "::1"].includes(request.nextUrl.hostname);
+  const base = isLocal ? request.nextUrl.origin : process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
   return new URL("/checkout/success", base).toString();
 }
 

@@ -64,7 +64,14 @@ type ProductValue = {
   imageUrls: string[];
   variants: VariantValue[];
   sizeGuideRows: SizeGuideRowValue[];
-  colorGuideOptions?: { name: string }[];
+  colorGuideOptions?: { name: string; swatchHex?: string; imageUrl?: string; description?: string }[];
+};
+
+type ShippingDefaults = {
+  weight: number;
+  length: number;
+  breadth: number;
+  height: number;
 };
 
 const input = "mt-2 h-11 w-full rounded-xl border border-[color:var(--color-border-strong)] bg-white px-4 text-sm outline-none focus:border-[color:var(--color-gold-deep)]";
@@ -161,7 +168,16 @@ export function ProductEditor({
   const [analysing, setAnalysing] = useState(false);
   const [analysisError, setAnalysisError] = useState("");
   const [variants, setVariants] = useState<VariantValue[]>(product?.variants ?? []);
+  const [shippingDefaults, setShippingDefaults] = useState<ShippingDefaults>(() => ({
+    weight: product?.variants.find((variant) => variant.weight > 0)?.weight ?? 0,
+    length: product?.variants.find((variant) => variant.length > 0)?.length ?? 0,
+    breadth: product?.variants.find((variant) => variant.breadth > 0)?.breadth ?? 0,
+    height: product?.variants.find((variant) => variant.height > 0)?.height ?? 0,
+  }));
   const [customColor, setCustomColor] = useState("");
+  const [colorImageUrls, setColorImageUrls] = useState<Record<string, string>>(() =>
+    Object.fromEntries((product?.colorGuideOptions ?? []).map((option) => [option.name, option.imageUrl ?? ""])),
+  );
   const [selectedColors, setSelectedColors] = useState(() => {
     const savedColors = [
       ...(product?.colors ?? "").split(","),
@@ -190,6 +206,20 @@ export function ProductEditor({
     setVariants((current) => current.map((variant, itemIndex) => itemIndex === index
       ? { ...variant, [key]: typeof variant[key] === "number" ? Number(value) : value }
       : variant));
+  }
+
+  function updateShippingDefault(key: keyof ShippingDefaults, value: number) {
+    setShippingDefaults((current) => ({ ...current, [key]: Number.isFinite(value) ? Math.max(0, value) : 0 }));
+  }
+
+  function applyShippingDefaultsToVariants() {
+    setVariants((current) => current.map((variant) => ({
+      ...variant,
+      weight: shippingDefaults.weight,
+      length: shippingDefaults.length,
+      breadth: shippingDefaults.breadth,
+      height: shippingDefaults.height,
+    })));
   }
 
   function toggleColor(color: string, checked: boolean) {
@@ -246,13 +276,13 @@ export function ProductEditor({
     }
   }
 
-  const colorGuideOptions = selectedColors.map((color) => ({ name: color, swatchHex: "", imageUrl: "", description: "" }));
+  const colorGuideOptions = selectedColors.map((color) => ({ name: color, swatchHex: "", imageUrl: colorImageUrls[color] ?? "", description: "" }));
 
   return (
     <form action={formAction} className="space-y-5">
       {product ? <input name="id" type="hidden" value={product.id} /> : null}
       <input name="variantsJson" type="hidden" value={JSON.stringify(variants)} />
-      <input name="sizeGuideRowsJson" type="hidden" value="[]" />
+      <input name="sizeGuideRowsJson" type="hidden" value={JSON.stringify(product?.sizeGuideRows ?? [])} />
       <input name="colorGuideOptionsJson" type="hidden" value={JSON.stringify(colorGuideOptions)} />
       <input name="colors" type="hidden" value={selectedColors.join(", ")} />
       {selectedSizes.map((size) => <input key={size} name="sizes" type="hidden" value={size} />)}
@@ -369,6 +399,24 @@ export function ProductEditor({
             </div>
           ) : null}
 
+          {selectedColors.length ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {selectedColors.map((color) => (
+                <label className="text-sm font-semibold" key={`${color}-image`}>
+                  Image for {color}
+                  <select
+                    className={input}
+                    onChange={(event) => setColorImageUrls((current) => ({ ...current, [color]: event.target.value }))}
+                    value={colorImageUrls[color] ?? ""}
+                  >
+                    <option value="">Use main product image</option>
+                    {imageUrls.map((url, index) => <option key={url} value={url}>Product image {index + 1}</option>)}
+                  </select>
+                </label>
+              ))}
+            </div>
+          ) : null}
+
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
             <label className="text-sm font-semibold">
               Custom color
@@ -409,11 +457,42 @@ export function ProductEditor({
       <details className={section}>
         <summary className="cursor-pointer font-display text-2xl">Variants (optional)</summary>
         <div className="mt-5 space-y-4">
+          <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-paper)]/50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">Default shipping package for Shiprocket</p>
+                <p className="mt-1 text-sm text-[color:var(--color-muted-foreground)]">
+                  Use grams for weight and cm for L x B x H. New variants will start with these values.
+                </p>
+              </div>
+              <Button disabled={!variants.length} onClick={applyShippingDefaultsToVariants} type="button" variant="outline">
+                Apply to all variants
+              </Button>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
+              <label className="text-xs font-semibold">
+                Weight (grams)
+                <input className={input} onChange={(event) => updateShippingDefault("weight", Number(event.target.value))} type="number" value={shippingDefaults.weight} />
+              </label>
+              <label className="text-xs font-semibold">
+                Length (cm)
+                <input className={input} onChange={(event) => updateShippingDefault("length", Number(event.target.value))} type="number" value={shippingDefaults.length} />
+              </label>
+              <label className="text-xs font-semibold">
+                Breadth (cm)
+                <input className={input} onChange={(event) => updateShippingDefault("breadth", Number(event.target.value))} type="number" value={shippingDefaults.breadth} />
+              </label>
+              <label className="text-xs font-semibold">
+                Height (cm)
+                <input className={input} onChange={(event) => updateShippingDefault("height", Number(event.target.value))} type="number" value={shippingDefaults.height} />
+              </label>
+            </div>
+          </div>
           {variants.map((variant, index) => (
             <div className="grid gap-3 rounded-2xl border border-[color:var(--color-border)] p-4 md:grid-cols-4" key={index}>
               {(["title", "sku", "color", "price", "inventory", "weight", "length", "breadth", "height"] as const).map((key) => (
                 <label className="text-xs font-semibold capitalize" key={key}>
-                  {key}
+                  {key === "weight" ? "Weight (grams)" : key === "length" ? "Length (cm)" : key === "breadth" ? "Breadth (cm)" : key === "height" ? "Height (cm)" : key}
                   <input
                     className={input}
                     onChange={(event) => updateVariant(index, key, event.target.value)}
@@ -432,7 +511,7 @@ export function ProductEditor({
               </Button>
             </div>
           ))}
-          <Button onClick={() => setVariants((current) => [...current, { title: "", sku: "", size: "", color: "", price: (product?.price ?? 0) / 100, inventory: 0, weight: 0, length: 0, breadth: 0, height: 0, isEnabled: true }])} type="button" variant="outline">
+          <Button onClick={() => setVariants((current) => [...current, { title: "", sku: "", size: "", color: "", price: (product?.price ?? 0) / 100, inventory: 0, weight: shippingDefaults.weight, length: shippingDefaults.length, breadth: shippingDefaults.breadth, height: shippingDefaults.height, isEnabled: true }])} type="button" variant="outline">
             <Plus className="size-4" /> Add variant
           </Button>
           {state.fieldErrors.variants ? <p className="text-sm text-red-700">{state.fieldErrors.variants}</p> : null}
