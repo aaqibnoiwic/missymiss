@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdminRequestAuthenticated } from "@/lib/auth";
-import { getCloudinaryConfigError, uploadImageToCloudinary } from "@/lib/cloudinary";
+import { getImageKitConfigError, uploadImageToImageKit } from "@/lib/imagekit";
 import { saveMediaAsset } from "@/lib/media-assets";
 import { allowedFolders } from "@/types/media";
 
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const configurationError = getCloudinaryConfigError();
+  const configurationError = getImageKitConfigError();
   if (configurationError) {
     return NextResponse.json({ error: configurationError }, { status: 503 });
   }
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const buffer = Buffer.from(await file.arrayBuffer());
-      const uploadedAsset = await uploadImageToCloudinary({
+      const uploadedAsset = await uploadImageToImageKit({
         buffer,
         filename: file.name,
         folder: folder as (typeof allowedFolders)[number],
