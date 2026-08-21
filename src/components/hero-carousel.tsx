@@ -2,9 +2,9 @@
 
 import type { Banner } from "@prisma/client";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 import { buttonVariants } from "@/components/ui/button-variants";
 
 export function HeroCarousel({ banners }: { banners: Banner[] }) {
@@ -34,12 +34,13 @@ export function HeroCarousel({ banners }: { banners: Banner[] }) {
     <section className="relative min-h-[72vh] overflow-hidden border-b border-[color:var(--color-border)] bg-[color:var(--color-charcoal)] text-white">
       {slide.desktopImage ? (
         <>
-          <Image alt={slide.title} className="hidden object-cover md:block" fill priority src={slide.desktopImage} />
+          <Image alt={slide.title} className="hidden object-cover md:block" fill priority={active === 0} sizes="100vw" src={slide.desktopImage} />
           <Image
             alt={slide.title}
             className="object-cover md:hidden"
             fill
-            priority
+            priority={active === 0}
+            sizes="100vw"
             src={slide.mobileImage || slide.desktopImage}
           />
         </>

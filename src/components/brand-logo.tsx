@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 import { cn } from "@/lib/utils";
 
 type BrandLogoProps = {

@@ -1,10 +1,10 @@
 "use client";
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { ImagePlus, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { allowedFolders, type MediaAsset } from "@/types/media";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 
 type ImageUploadFieldProps = {
   defaultValue?: string | null;

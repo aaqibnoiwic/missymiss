@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { Ruler, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 
 export function SizeChartModal() {
   const [open, setOpen] = useState(false);
@@ -56,7 +56,6 @@ export function SizeChartModal() {
                 alt="Missy Miss size chart and body measurement guide"
                 className="h-auto w-full rounded-xl"
                 height={1536}
-                priority
                 src="/size-chart.png"
                 width={1024}
               />

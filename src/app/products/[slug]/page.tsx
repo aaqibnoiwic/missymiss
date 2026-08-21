@@ -1,5 +1,4 @@
 import { Leaf, Sparkles, Star } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductColorImageProvider } from "@/components/product-color-image-context";
@@ -8,6 +7,7 @@ import { ProductPurchasePanel } from "@/components/product-purchase-panel";
 import { ProductCard } from "@/components/product-card";
 import { SizeChartModal } from "@/components/size-chart-modal";
 import { prisma } from "@/lib/db";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 
 type PageProps = {
   params: Promise<{ slug: string }>;

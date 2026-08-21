@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 import { AdminListToolbar, AdminPagination } from "@/components/admin/admin-list";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { requireAdmin } from "@/lib/admin-auth";

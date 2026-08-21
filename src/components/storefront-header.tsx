@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, LoaderCircle, Menu, Search, X } from "lucide-react";
 import { useDeferredValue, useEffect, useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { CartLink } from "@/components/cart-link";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 
 type CategoryLink = { id: string; slug: string; title: string; collectionType: string };
 type SearchResults = {

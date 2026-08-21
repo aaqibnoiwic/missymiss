@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { deleteProduct } from "@/app/admin/actions";
@@ -9,6 +8,7 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { requireAdmin } from "@/lib/admin-auth";
 import { ADMIN_PAGE_SIZE, readPage, readQuery } from "@/lib/admin-ui";
 import { prisma } from "@/lib/db";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 
 type PageProps = {
   searchParams: Promise<{ page?: string; q?: string; status?: string }>;

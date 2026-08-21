@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import type { Product, ProductImage, ProductVariant } from "@prisma/client";
 import { Check, ShoppingBag, Zap } from "lucide-react";
@@ -8,6 +7,7 @@ import { useState, type MouseEvent } from "react";
 import { useCart } from "@/components/cart-provider";
 import { isShiprocketCheckoutEnabled, openShiprocketCheckout } from "@/lib/shiprocket-checkout-client";
 import { Button } from "@/components/ui/button";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 
 type ProductCardProps = {
   product: Product & { images?: ProductImage[]; variants?: ProductVariant[] };
@@ -74,7 +74,7 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <article className="group overflow-hidden rounded-[2rem] border border-[color:var(--color-border)] bg-white/88 shadow-[0_16px_45px_rgba(116,94,56,0.07)] transition duration-300 hover:-translate-y-1 hover:border-[color:var(--color-gold-deep)]/40 hover:shadow-[0_26px_70px_rgba(116,94,56,0.16)] focus-within:border-[color:var(--color-gold-deep)]">
       <Link className="relative block h-72 overflow-hidden bg-[color:var(--color-paper)]" href={`/products/${product.slug}${selected ? `?variant=${selected.id}` : ""}`}>
-        {image ? <Image alt={product.name} className="object-cover transition-transform duration-700 group-hover:scale-105" fill sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw" src={image} /> : <div className="hero-mesh h-full" />}
+        {image ? <Image alt={product.name} className="object-cover transition-transform duration-700 group-hover:scale-105" fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" src={image} /> : <div className="hero-mesh h-full" />}
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
           {product.isNewArrival ? <span className="rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-wider">New</span> : null}
           {product.isBestSeller ? <span className="rounded-full bg-[color:var(--color-charcoal)] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">Bestseller</span> : null}

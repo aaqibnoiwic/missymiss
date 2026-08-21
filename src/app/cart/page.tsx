@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, Minus, Plus, ShieldCheck, Trash2, Truck } from "lucide-react";
-import Image from "next/image";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 import Link from "next/link";
 import { useState, type MouseEvent } from "react";
 import { useCart } from "@/components/cart-provider";
@@ -57,7 +57,7 @@ export default function CartPage() {
             {items.map((item) => (
               <article className="grid grid-cols-[6rem_1fr] gap-5 rounded-[2rem] border border-[color:var(--color-border)] bg-white/85 p-4 sm:grid-cols-[7rem_1fr_auto]" key={item.lineId}>
                 <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-[color:var(--color-paper)]">
-                  {item.imageUrl ? <Image alt={item.name} className="object-cover" fill src={item.imageUrl} /> : null}
+                  {item.imageUrl ? <Image alt={item.name} className="object-cover" fill sizes="(max-width: 640px) 96px, 112px" src={item.imageUrl} /> : null}
                 </div>
                 <div className="space-y-2">
                   <Link className="font-display text-2xl" href={`/products/${item.slug}`}>{item.name}</Link>

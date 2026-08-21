@@ -1,8 +1,8 @@
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { Copy, ImagePlus, LoaderCircle, Upload } from "lucide-react";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

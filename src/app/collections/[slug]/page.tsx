@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";

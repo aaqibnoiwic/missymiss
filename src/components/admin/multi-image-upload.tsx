@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ImagePlus, LoaderCircle, Star, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { BatchMediaResponse } from "@/types/media";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 
 export function MultiImageUpload({
   defaultUrls = [],

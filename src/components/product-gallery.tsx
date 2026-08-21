@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 import { useProductColorImage } from "@/components/product-color-image-context";
 
 export function ProductGallery({
@@ -59,7 +59,7 @@ export function ProductGallery({
           alt={selected.alt || productName}
           className="object-cover transition-transform duration-700 group-hover:scale-105"
           fill
-          priority
+          priority={active === 0}
           sizes="(min-width: 1024px) 50vw, 100vw"
           src={selected.imageUrl}
         />

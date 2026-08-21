@@ -1,5 +1,5 @@
 import { ArrowRight, Leaf, Star } from "lucide-react";
-import Image from "next/image";
+import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { HeroCarousel } from "@/components/hero-carousel";
@@ -113,7 +113,7 @@ export default async function Home() {
         <section className="mx-auto grid max-w-7xl gap-5 px-6 pb-16 md:px-10 lg:grid-cols-2 lg:px-16">
           {promoBanners.slice(0, 4).map((banner) => (
             <Link className="group relative min-h-80 overflow-hidden rounded-[2.25rem] bg-[color:var(--color-charcoal)] text-white" href={banner.ctaHref || "/shop"} key={banner.id}>
-              {banner.desktopImage ? <Image alt={banner.title} className="object-cover transition duration-700 group-hover:scale-105" fill src={banner.desktopImage} /> : null}
+              {banner.desktopImage ? <Image alt={banner.title} className="object-cover transition duration-700 group-hover:scale-105" fill sizes="(max-width: 1024px) 100vw, 50vw" src={banner.desktopImage} /> : null}
               <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(20,20,20,.78))]" />
               <div className="absolute inset-x-0 bottom-0 p-7">
                 <p className="text-xs font-bold uppercase tracking-[.25em] text-white/65">{banner.ctaLabel || "Discover"}</p>
