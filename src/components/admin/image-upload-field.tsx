@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { ImagePlus, LoaderCircle } from "lucide-react";
+import { CheckCircle2, ImagePlus, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { allowedFolders, type MediaAsset } from "@/types/media";
 import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
@@ -24,17 +24,27 @@ export function ImageUploadField({
   const [preview, setPreview] = useState(defaultValue ?? "");
   const [error, setError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploaded, setIsUploaded] = useState(false);
 
   useEffect(() => {
     setUrl(defaultValue ?? "");
     setPreview(defaultValue ?? "");
   }, [defaultValue]);
 
+  // Clears the success message on its own so it doesn't linger stale if the field is
+  // later edited by pasting a URL instead of uploading again.
+  useEffect(() => {
+    if (!isUploaded) return;
+    const timeout = window.setTimeout(() => setIsUploaded(false), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [isUploaded]);
+
   async function uploadImage(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
+    setIsUploaded(false);
     setError("");
 
     const localPreview = URL.createObjectURL(file);
@@ -64,6 +74,7 @@ export function ImageUploadField({
     setUrl(payload.asset.url);
     setPreview(payload.asset.url);
     setIsUploading(false);
+    setIsUploaded(true);
   }
 
   return (
@@ -104,6 +115,11 @@ export function ImageUploadField({
               <LoaderCircle className="size-4 animate-spin" />
               Uploading image...
             </>
+          ) : isUploaded ? (
+            <span className="flex items-center gap-2 text-green-700">
+              <CheckCircle2 className="size-4" />
+              Image uploaded successfully
+            </span>
           ) : (
             "Click to upload image"
           )}
@@ -120,6 +136,7 @@ export function ImageUploadField({
           onChange={(event) => {
             setUrl(event.target.value);
             setPreview(event.target.value);
+            setIsUploaded(false);
           }}
           placeholder="Or paste image URL"
           type="url"

@@ -2,6 +2,7 @@
 
 import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth";
 import type { AdminActionState } from "@/lib/admin-ui";
@@ -452,7 +453,7 @@ export async function saveBanner(formData: FormData) {
     mobileImage: text(formData, "mobileImage"),
     scope: text(formData, "scope") || "home",
     placement: text(formData, "placement") || "hero",
-    presentation: text(formData, "presentation") || "cover",
+    presentation: text(formData, "presentation") || "image",
     textAlignment: text(formData, "textAlignment") || "left",
     targetSlug: text(formData, "targetSlug"),
     isEnabled: bool(formData, "isEnabled"),
@@ -468,12 +469,24 @@ export async function saveBanner(formData: FormData) {
   if (!data.title) return;
 
   if (id) {
-    await prisma.banner.update({ where: { id }, data });
+    // Banner forms differ in which fields they render; keep anything a form didn't send
+    // instead of resetting it (the checkbox is the exception: unchecked sends nothing).
+    const sent = Object.fromEntries(
+      Object.entries(data).filter(([key]) => key === "isEnabled" || formData.has(key)),
+    );
+    await prisma.banner.update({ where: { id }, data: sent });
   } else {
     await prisma.banner.create({ data });
   }
 
   refreshCms();
+
+  // Only the standalone /admin/banners pages send this — it sends the admin back to the
+  // banner list instead of re-rendering the single-banner edit page, which 404s once a
+  // delete (or the id itself) no longer resolves. The inline CMS content manager doesn't
+  // send it, since it edits banners in place and should stay put.
+  const redirectTo = text(formData, "redirectTo");
+  if (redirectTo) redirect(redirectTo);
 }
 
 export async function deleteBanner(formData: FormData) {
@@ -482,6 +495,9 @@ export async function deleteBanner(formData: FormData) {
   if (!id) return;
   await prisma.banner.delete({ where: { id } });
   refreshCms();
+
+  const redirectTo = text(formData, "redirectTo");
+  if (redirectTo) redirect(redirectTo);
 }
 
 export async function saveGalleryImage(formData: FormData) {

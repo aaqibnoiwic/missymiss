@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { buildCollectionTypeFilter } from "@/lib/shop-filter-query";
 
 const now = () => new Date();
 
@@ -112,6 +113,7 @@ export async function getHomeData() {
 
 export async function getShopProducts(options: {
   q?: string;
+  collection?: string;
   category?: string;
   size?: string;
   color?: string;
@@ -120,11 +122,13 @@ export async function getShopProducts(options: {
   availability?: string;
   sort?: string;
 } = {}) {
-  const { q, category, size, color, minPrice, maxPrice, availability, sort } = options;
+  const { q, collection, category, size, color, minPrice, maxPrice, availability, sort } = options;
+  const collectionTypeFilter = buildCollectionTypeFilter(collection);
   return prisma.product.findMany({
     where: {
       isPublished: true,
       AND: [
+        ...(collectionTypeFilter ? [collectionTypeFilter] : []),
         ...(q ? [{ OR: [
           { name: { contains: q, mode: "insensitive" as const } },
           { shortDescription: { contains: q, mode: "insensitive" as const } },

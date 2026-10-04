@@ -26,6 +26,7 @@ import {
   saveProductImage,
   saveTestimonial,
 } from "@/app/admin/actions";
+import { BANNER_IMAGE_HINTS, BANNER_PRESENTATION_OPTIONS, BANNER_TEXT_ALIGNMENT_OPTIONS, bannerShowsText } from "@/lib/banner-display";
 
 type ProductWithRelations = Product & {
   categories: (ProductCategory & { category: Category })[];
@@ -460,10 +461,14 @@ export function CmsManagementPanel({ data }: { data: CmsData }) {
             <CategoryTargetSelect categories={data.categories} />
             <Field label="Sort order" name="sortOrder" type="number" />
           </div>
-          <TextArea label="Subtitle" name="subtitle" rows={3} />
+<div className="grid gap-4 md:grid-cols-2">
+            <SelectField defaultValue="image" label="Text on banner" name="presentation" options={BANNER_PRESENTATION_OPTIONS} />
+            <SelectField defaultValue="left" label="Text & button alignment" name="textAlignment" options={BANNER_TEXT_ALIGNMENT_OPTIONS} />
+          </div>
+          <TextArea label="Subtitle (shown only when text is on)" name="subtitle" rows={3} />
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="CTA label" name="ctaLabel" />
-            <Field label="CTA URL" name="ctaHref" />
+            <Field label="Button text (optional — leave empty for no button)" name="ctaLabel" />
+            <Field label="Link URL (button, or whole banner)" name="ctaHref" />
             <Field label="Starts at" name="startsAt" type="datetime-local" />
             <Field label="Ends at" name="endsAt" type="datetime-local" />
           </div>
@@ -478,6 +483,10 @@ export function CmsManagementPanel({ data }: { data: CmsData }) {
               label="Mobile banner image"
               name="mobileImage"
             />
+          </div>
+          <div className="grid gap-4 text-xs text-[color:var(--color-muted-foreground)] md:grid-cols-2">
+            <p>{BANNER_IMAGE_HINTS.desktop}</p>
+            <p>{BANNER_IMAGE_HINTS.mobile}</p>
           </div>
           <SeoFields />
           <Check label="Enabled" name="isEnabled" />
@@ -502,10 +511,14 @@ export function CmsManagementPanel({ data }: { data: CmsData }) {
                 />
                 <Field defaultValue={banner.sortOrder} label="Sort order" name="sortOrder" type="number" />
               </div>
-              <TextArea defaultValue={banner.subtitle} label="Subtitle" name="subtitle" rows={3} />
+<div className="grid gap-4 md:grid-cols-2">
+                <SelectField defaultValue={bannerShowsText(banner.presentation) ? "overlay" : "image"} label="Text on banner" name="presentation" options={BANNER_PRESENTATION_OPTIONS} />
+                <SelectField defaultValue={banner.textAlignment} label="Text & button alignment" name="textAlignment" options={BANNER_TEXT_ALIGNMENT_OPTIONS} />
+              </div>
+              <TextArea defaultValue={banner.subtitle} label="Subtitle (shown only when text is on)" name="subtitle" rows={3} />
               <div className="grid gap-4 md:grid-cols-2">
-                <Field defaultValue={banner.ctaLabel} label="CTA label" name="ctaLabel" />
-                <Field defaultValue={banner.ctaHref} label="CTA URL" name="ctaHref" />
+                <Field defaultValue={banner.ctaLabel} label="Button text (optional — leave empty for no button)" name="ctaLabel" />
+                <Field defaultValue={banner.ctaHref} label="Link URL (button, or whole banner)" name="ctaHref" />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <ImageUploadField
@@ -520,6 +533,10 @@ export function CmsManagementPanel({ data }: { data: CmsData }) {
                   label="Mobile banner image"
                   name="mobileImage"
                 />
+              </div>
+              <div className="grid gap-4 text-xs text-[color:var(--color-muted-foreground)] md:grid-cols-2">
+                <p>{BANNER_IMAGE_HINTS.desktop}</p>
+                <p>{BANNER_IMAGE_HINTS.mobile}</p>
               </div>
               <SeoFields item={banner} />
               <Check defaultChecked={banner.isEnabled} label="Enabled" name="isEnabled" />
