@@ -29,10 +29,18 @@ export function ProductGallery({
   }, [selectedIndex]);
 
   useEffect(() => {
+    const rail = thumbnailRailRef.current;
     const activeThumbnail = thumbnailRefs.current[active];
-    if (activeThumbnail) {
-      activeThumbnail.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-    }
+    if (!rail || !activeThumbnail) return;
+
+    const railBounds = rail.getBoundingClientRect();
+    const thumbnailBounds = activeThumbnail.getBoundingClientRect();
+    // Scroll only the thumbnail rail; scrollIntoView also moves the page.
+    rail.scrollTo({
+      left: rail.scrollLeft + thumbnailBounds.left - railBounds.left
+        - (rail.clientWidth - thumbnailBounds.width) / 2,
+      behavior: "smooth",
+    });
   }, [active]);
 
   const selected = displayImages[active] ?? displayImages[0];

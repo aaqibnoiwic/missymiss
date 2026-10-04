@@ -91,3 +91,84 @@ export function buildShopHref(filters: ShopFilterState): string {
   const query = params.toString();
   return query ? `/shop?${query}` : "/shop";
 }
+
+type ShopFilterNavigatorOptions = {
+  cancel?: (timer: unknown) => void;
+  currentHref?: string;
+  delay?: number;
+  navigate: (href: string) => void;
+  schedule?: (callback: () => void, delay: number) => unknown;
+};
+
+export function createShopFilterNavigator({
+  cancel = (timer) => clearTimeout(timer as ReturnType<typeof setTimeout>),
+  currentHref = "",
+  delay = 400,
+  navigate,
+  schedule = (callback, wait) => setTimeout(callback, wait),
+}: ShopFilterNavigatorOptions) {
+  let timer: unknown;
+  let committedHref = currentHref;
+  let pendingHref: string | undefined;
+  const supersededHrefs = new Set<string>();
+
+  function dispose() {
+    if (timer !== undefined) {
+      cancel(timer);
+      timer = undefined;
+    }
+  }
+
+  function immediate(filters: ShopFilterState) {
+    dispose();
+
+    const href = buildShopHref(filters);
+    if (href === pendingHref || (pendingHref === undefined && href === committedHref)) return;
+
+    if (pendingHref !== undefined) supersededHrefs.add(pendingHref);
+    supersededHrefs.delete(href);
+    pendingHref = href;
+    navigate(href);
+  }
+
+  function external() {
+    dispose();
+    pendingHref = undefined;
+    supersededHrefs.clear();
+  }
+
+  return {
+    acknowledge(href: string) {
+      const hasDraft = timer !== undefined;
+
+      if (href === pendingHref) {
+        pendingHref = undefined;
+        supersededHrefs.clear();
+        committedHref = href;
+        return !hasDraft;
+      }
+
+      if (
+        supersededHrefs.delete(href)
+        || (pendingHref !== undefined && href === committedHref)
+        || (hasDraft && href === committedHref)
+      ) return false;
+
+      dispose();
+      pendingHref = undefined;
+      supersededHrefs.clear();
+      committedHref = href;
+      return true;
+    },
+    debounced(filters: ShopFilterState) {
+      if (timer !== undefined) cancel(timer);
+      timer = schedule(() => {
+        timer = undefined;
+        immediate(filters);
+      }, delay);
+    },
+    dispose,
+    external,
+    immediate,
+  };
+}

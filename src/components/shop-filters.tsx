@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Loader2, Search, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button-variants";
 import {
   buildShopHref,
+  createShopFilterNavigator,
   EMPTY_SHOP_FILTERS,
   toShopFilterState,
   type ShopFilterSearch,
@@ -58,53 +59,93 @@ function Select({ children, id, onChange, value }: { children: ReactNode; id: st
 
 export function ShopFilters({ categories, colors, filters, sizes }: ShopFiltersProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [values, setValues] = useState<ShopFilterState>(() => toShopFilterState(filters));
-  const applied = toShopFilterState(filters);
-  const isDirty = buildShopHref(values) !== buildShopHref(applied);
+  const valuesRef = useRef(values);
+  const currentHref = buildShopHref(toShopFilterState(filters));
+  const [navigator] = useState(
+    () => createShopFilterNavigator({
+      currentHref,
+      navigate: (href) => router.replace(href, { scroll: false }),
+    }),
+  );
 
-  function update<Key extends keyof ShopFilterState>(key: Key, value: ShopFilterState[Key]) {
-    setValues((current) => ({ ...current, [key]: value }));
-  }
+  useEffect(() => {
+    const handleExternalNavigation = () => navigator.external();
+    const handleLinkClick = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented
+        || event.button !== 0
+        || event.metaKey
+        || event.ctrlKey
+        || event.shiftKey
+        || event.altKey
+        || !(event.target instanceof Element)
+      ) return;
 
-  function navigate(next: ShopFilterState) {
+      const anchor = event.target.closest("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement) || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+
+      const url = new URL(anchor.href, window.location.href);
+      if (url.origin === window.location.origin && url.pathname === "/shop") navigator.external();
+    };
+
+    window.addEventListener("popstate", handleExternalNavigation);
+    document.addEventListener("click", handleLinkClick, true);
+    return () => {
+      window.removeEventListener("popstate", handleExternalNavigation);
+      document.removeEventListener("click", handleLinkClick, true);
+      navigator.dispose();
+    };
+  }, [navigator]);
+  useEffect(() => {
+    if (!navigator.acknowledge(currentHref)) return;
+
+    const committed = toShopFilterState(filters);
+    valuesRef.current = committed;
+    setValues(committed);
+  }, [currentHref, filters, navigator]);
+
+  function navigate(next: ShopFilterState, debounce = false) {
+    valuesRef.current = next;
     setValues(next);
-    startTransition(() => {
-      router.push(buildShopHref(next), { scroll: false });
-    });
+    if (debounce) navigator.debounced(next);
+    else navigator.immediate(next);
   }
 
-  function applyFilters(event: FormEvent<HTMLFormElement>) {
+  function update<Key extends keyof ShopFilterState>(key: Key, value: ShopFilterState[Key], debounce = false) {
+    navigate({ ...valuesRef.current, [key]: value }, debounce);
+  }
+
+  function submitFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    navigate(values);
+    navigator.immediate(valuesRef.current);
   }
 
   const categoryTitle = (slug: string) => categories.find((category) => category.slug === slug)?.title ?? slug;
   const price =
-    applied.minPrice && applied.maxPrice
-      ? `₹${applied.minPrice} – ₹${applied.maxPrice}`
-      : applied.minPrice
-        ? `From ₹${applied.minPrice}`
-        : applied.maxPrice
-          ? `Up to ₹${applied.maxPrice}`
+    values.minPrice && values.maxPrice
+      ? `₹${values.minPrice} – ₹${values.maxPrice}`
+      : values.minPrice
+        ? `From ₹${values.minPrice}`
+        : values.maxPrice
+          ? `Up to ₹${values.maxPrice}`
           : "";
   type Chip = { label: string; clear: Partial<ShopFilterState> };
   const chips = ([
-    applied.q && { label: `“${applied.q}”`, clear: { q: "" } },
-    applied.collection && { label: COLLECTION_LABELS[applied.collection], clear: { collection: "" as const } },
-    applied.category && { label: categoryTitle(applied.category), clear: { category: "" } },
-    applied.size && { label: `Size ${applied.size}`, clear: { size: "" } },
-    applied.color && { label: applied.color, clear: { color: "" } },
+    values.q && { label: `“${values.q}”`, clear: { q: "" } },
+    values.collection && { label: COLLECTION_LABELS[values.collection], clear: { collection: "" as const } },
+    values.category && { label: categoryTitle(values.category), clear: { category: "" } },
+    values.size && { label: `Size ${values.size}`, clear: { size: "" } },
+    values.color && { label: values.color, clear: { color: "" } },
     price && { label: price, clear: { minPrice: "", maxPrice: "" } },
-    applied.availability && { label: "In stock", clear: { availability: false } },
-    applied.sort && { label: SORT_LABELS[applied.sort] ?? applied.sort, clear: { sort: "" } },
+    values.availability && { label: "In stock", clear: { availability: false } },
+    values.sort && { label: SORT_LABELS[values.sort] ?? values.sort, clear: { sort: "" } },
   ] as Array<Chip | false | "">).filter((chip): chip is Chip => Boolean(chip));
 
   return (
     <form
-      aria-busy={isPending}
       className="rounded-[1.75rem] border border-[color:var(--color-border)] bg-white/90 shadow-[0_18px_60px_rgba(116,94,56,.08)]"
-      onSubmit={applyFilters}
+      onSubmit={submitFilters}
     >
       <div className="flex flex-col gap-3 border-b border-[color:var(--color-border)] p-4 sm:flex-row sm:items-center md:p-5">
         <div className="relative flex-1">
@@ -113,7 +154,7 @@ export function ShopFilters({ categories, colors, filters, sizes }: ShopFiltersP
             aria-label="Search products"
             className={`${control} pl-10`}
             name="q"
-            onChange={(event) => update("q", event.target.value)}
+            onChange={(event) => update("q", event.target.value, true)}
             placeholder="Search by name, category or SKU"
             type="search"
             value={values.q}
@@ -166,9 +207,9 @@ export function ShopFilters({ categories, colors, filters, sizes }: ShopFiltersP
         </Field>
         <Field htmlFor="minPrice" label="Price (₹)">
           <div className="flex items-center gap-2">
-            <input aria-label="Minimum price" className={control} id="minPrice" inputMode="numeric" min="0" name="minPrice" onChange={(event) => update("minPrice", event.target.value)} placeholder="Min" type="number" value={values.minPrice} />
+            <input aria-label="Minimum price" className={control} id="minPrice" inputMode="numeric" min="0" name="minPrice" onChange={(event) => update("minPrice", event.target.value, true)} placeholder="Min" type="number" value={values.minPrice} />
             <span aria-hidden className="text-[color:var(--color-muted-foreground)]">–</span>
-            <input aria-label="Maximum price" className={control} inputMode="numeric" min="0" name="maxPrice" onChange={(event) => update("maxPrice", event.target.value)} placeholder="Max" type="number" value={values.maxPrice} />
+            <input aria-label="Maximum price" className={control} inputMode="numeric" min="0" name="maxPrice" onChange={(event) => update("maxPrice", event.target.value, true)} placeholder="Max" type="number" value={values.maxPrice} />
           </div>
         </Field>
       </div>
@@ -180,9 +221,8 @@ export function ShopFilters({ categories, colors, filters, sizes }: ShopFiltersP
               <button
                 aria-label={`Remove filter ${chip.label}`}
                 className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[color:var(--color-border-strong)] bg-white pl-3 pr-2 text-xs font-medium transition-colors hover:border-[color:var(--color-gold-deep)] disabled:opacity-50"
-                disabled={isPending}
                 key={chip.label}
-                onClick={() => navigate({ ...applied, ...chip.clear })}
+                onClick={() => navigate({ ...valuesRef.current, ...chip.clear })}
                 type="button"
               >
                 {chip.label}
@@ -199,14 +239,11 @@ export function ShopFilters({ categories, colors, filters, sizes }: ShopFiltersP
         <div className="flex shrink-0 items-center gap-2">
           <button
             className={buttonVariants({ className: "flex-1 md:flex-none", variant: "outline" })}
-            disabled={isPending || (!chips.length && !isDirty)}
+            disabled={!chips.length}
             onClick={() => navigate(EMPTY_SHOP_FILTERS)}
             type="button"
           >
             Clear all
-          </button>
-          <button className={buttonVariants({ className: "min-w-36 flex-1 md:flex-none" })} disabled={isPending || !isDirty} type="submit">
-            {isPending ? <><Loader2 aria-hidden className="size-4 animate-spin" />Applying…</> : "Apply filters"}
           </button>
         </div>
       </div>
