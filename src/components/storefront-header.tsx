@@ -110,8 +110,8 @@ export function StorefrontHeader({ categories }: { categories: CategoryLink[] })
     },
   ].filter((group) => group.items.length);
   return <header className="sticky top-0 z-50 border-b border-[color:var(--color-border)] bg-[rgba(250,249,246,0.9)] backdrop-blur-xl" data-storefront-header="true">
-    <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 md:px-10 lg:px-16">
-      <Link className="flex items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-gold-deep)]" href="/"><BrandLogo className="w-11" variant="symbol" /><div className="hidden sm:block"><p className="font-display text-xl leading-none">Missy Miss</p><p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-[color:var(--color-muted-foreground)]">Luxury Fashion</p></div></Link>
+    <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3 md:px-10 lg:px-16">
+      <Link className="flex min-w-0 items-center gap-2 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-gold-deep)] sm:gap-3" href="/"><BrandLogo className="w-9 shrink-0 sm:w-11" variant="symbol" /><div className="min-w-0"><p className="whitespace-nowrap font-display text-base leading-none sm:text-xl">Missy Miss</p><p className="mt-1 hidden text-[10px] font-semibold uppercase tracking-[0.25em] text-[color:var(--color-muted-foreground)] sm:block">Luxury Fashion</p></div></Link>
       <nav className="hidden items-center gap-1 text-sm font-medium text-[color:var(--color-muted-foreground)] lg:flex">
         <Link className={navLink} href="/">Home</Link>
         <Link className={navLink} href="/shop">Shop</Link>
@@ -144,7 +144,7 @@ export function StorefrontHeader({ categories }: { categories: CategoryLink[] })
       <div className="flex items-center gap-2">
         <SearchBox />
         <CartLink />
-        <button aria-expanded={open} aria-label="Open navigation" className="flex size-11 items-center justify-center rounded-full border border-[color:var(--color-border-strong)] bg-white transition hover:bg-[color:var(--color-paper)] lg:hidden" onClick={() => setOpen(!open)}>{open ? <X className="size-5" /> : <Menu className="size-5" />}</button>
+        <button aria-expanded={open} aria-label={open ? "Close navigation" : "Open navigation"} className="flex size-11 items-center justify-center rounded-full border border-[color:var(--color-border-strong)] bg-white transition hover:bg-[color:var(--color-paper)] lg:hidden" onClick={() => setOpen(!open)}>{open ? <X className="size-5" /> : <Menu className="size-5" />}</button>
       </div>
     </div>
     {open ? <div className="max-h-[calc(100svh-5rem)] overflow-y-auto border-t border-[color:var(--color-border)] bg-[color:var(--background)] px-4 py-5 lg:hidden">

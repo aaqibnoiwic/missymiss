@@ -71,7 +71,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         colorOptions={product.colorGuideOptions.map(({ name, imageUrl }) => ({ name, imageUrl }))}
         initialColor={product.variants.find((item) => item.id === variant)?.color || product.colors.split(",")[0]?.trim() || ""}
       >
-      <section className="mx-auto grid max-w-7xl gap-12 px-6 py-12 md:px-10 lg:grid-cols-[1.05fr_.95fr] lg:px-16 lg:py-16">
+      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:gap-12 sm:px-6 sm:py-12 md:px-10 lg:grid-cols-[1.05fr_.95fr] lg:px-16 lg:py-16">
         <ProductGallery images={images} productName={product.name} />
         <div className="space-y-7 lg:sticky lg:top-28 lg:h-fit">
           <p className="section-label">
@@ -83,7 +83,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
               {product.isBestSeller ? <span className="rounded-full bg-[color:var(--color-charcoal)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">Bestseller</span> : null}
               {product.isSustainable ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-800"><Leaf className="mr-1 inline size-3" />Sustainable</span> : null}
             </div>
-            <h1 className="font-display text-5xl leading-none tracking-[-0.05em] text-[color:var(--color-charcoal)] md:text-6xl">
+            <h1 className="font-display text-4xl leading-[1.02] tracking-[-0.05em] text-[color:var(--color-charcoal)] sm:text-5xl md:text-6xl">
               {product.name}
             </h1>
             <p className="mt-4 text-lg leading-8 text-[color:var(--color-muted-foreground)]">
@@ -100,15 +100,15 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           ) : null}
           <ProductPurchasePanel initialVariantId={variant} product={product} variants={product.variants} />
           <SizeChartModal />
-          <div className="rounded-[2rem] border border-[color:var(--color-border)] bg-white/80 p-6">
-            <p className="leading-8 text-[color:var(--color-muted-foreground)]">{product.description}</p>
+          <div className="rounded-[1.5rem] border border-[color:var(--color-border)] bg-white/80 p-4 sm:rounded-[2rem] sm:p-6">
+            <p className="text-sm leading-7 text-[color:var(--color-muted-foreground)] sm:text-base sm:leading-8">{product.description}</p>
           </div>
         </div>
       </section>
       </ProductColorImageProvider>
 
       {product.sizeGuideRows.length || product.colorGuideOptions.length ? (
-        <section className="mx-auto grid max-w-7xl gap-5 px-6 pb-16 md:px-10 lg:grid-cols-[1.1fr_.9fr] lg:px-16">
+        <section className="mx-auto grid max-w-7xl gap-5 px-4 pb-12 sm:px-6 sm:pb-16 md:px-10 lg:grid-cols-[1.1fr_.9fr] lg:px-16">
           {product.sizeGuideRows.length ? (
             <div className="rounded-[2rem] border border-[color:var(--color-border)] bg-white/82 p-6">
               <p className="section-label">Size Guide</p>
@@ -170,7 +170,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
       ) : null}
 
       {details.length ? (
-        <section className="mx-auto max-w-7xl px-6 pb-16 md:px-10 lg:px-16">
+        <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 sm:pb-16 md:px-10 lg:px-16">
           <div className="grid gap-4 md:grid-cols-2">
             {details.map(([title, value]) => (
               <details className="group rounded-[2rem] border border-[color:var(--color-border)] bg-white/82 p-6 transition hover:border-[color:var(--color-gold-deep)]/40" key={title} open={title === "Highlights"}>
@@ -185,7 +185,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
       {product.reviews.length ? (
         <section className="border-y border-[color:var(--color-border)] bg-[color:var(--color-paper)]/60">
-          <div className="mx-auto max-w-7xl px-6 py-16 md:px-10 lg:px-16">
+          <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 md:px-10 lg:px-16">
             <p className="section-label">Customer Notes</p>
             <h2 className="section-title">Loved in real wardrobes</h2>
             <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -201,7 +201,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           </div>
         </section>
       ) : null}
-      {relatedProducts.length ? <section className="mx-auto max-w-7xl px-6 py-16 md:px-10 lg:px-16"><p className="section-label">Complete the edit</p><h2 className="section-title">You may also love</h2><div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">{relatedProducts.map((related) => <ProductCard key={related.id} product={related} />)}</div></section> : null}
+      {relatedProducts.length ? <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 md:px-10 lg:px-16"><p className="section-label">Complete the edit</p><h2 className="section-title">You may also love</h2><div className="mt-6 grid gap-4 sm:mt-8 sm:gap-5 sm:grid-cols-2 xl:grid-cols-4">{relatedProducts.map((related) => <ProductCard key={related.id} product={related} />)}</div></section> : null}
     </main>
   );
 }

@@ -26,7 +26,7 @@ export default async function Home() {
       <HeroCarousel banners={heroBanners} />
       <CategoryQuickLinks categories={categories} />
 
-      <section className="mx-auto max-w-7xl px-6 py-16 md:px-10 lg:px-16">
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 md:px-10 lg:px-16">
         <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <div className="space-y-5">
             <p className="section-label">Style In Motion</p>
@@ -57,8 +57,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <section id="categories" className="mx-auto max-w-7xl px-6 py-16 md:px-10 lg:px-16">
-        <div className="mb-8 flex items-center justify-between gap-4">
+      <section id="categories" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 md:px-10 lg:px-16">
+        <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:mb-8 sm:flex-row sm:items-center sm:gap-4">
           <div>
             <p className="section-label">Featured Categories</p>
             <h2 className="section-title">A wardrobe shaped around real life</h2>
@@ -67,11 +67,11 @@ export default async function Home() {
             View Collection
           </Link>
         </div>
-        <div className="-mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-6 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:grid md:grid-cols-2 md:gap-5 md:overflow-visible md:px-0 md:pb-0 lg:auto-rows-fr xl:grid-cols-3">
+        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:gap-5 md:overflow-visible md:px-0 md:pb-0 lg:auto-rows-fr xl:grid-cols-3">
           {categories.map((category, index) => (
             <article
               key={category.title}
-              className="group relative h-[22rem] w-[78vw] max-w-[20rem] shrink-0 snap-start overflow-hidden rounded-[2rem] border border-[color:var(--color-border)] bg-white/80 p-5 shadow-[0_18px_60px_rgba(116,94,56,0.08)] transition duration-300 hover:-translate-y-1 hover:border-[color:var(--color-gold-deep)]/40 hover:shadow-[0_28px_80px_rgba(116,94,56,.16)] md:h-auto md:min-h-80 md:w-auto md:max-w-none md:p-7 lg:h-full"
+              className="group relative h-[21rem] w-[82vw] max-w-[20rem] shrink-0 snap-start overflow-hidden rounded-[1.5rem] border border-[color:var(--color-border)] bg-white/80 p-4 shadow-[0_18px_60px_rgba(116,94,56,0.08)] transition duration-300 hover:-translate-y-1 hover:border-[color:var(--color-gold-deep)]/40 hover:shadow-[0_28px_80px_rgba(116,94,56,.16)] sm:h-[22rem] sm:rounded-[2rem] sm:p-5 md:h-auto md:min-h-80 md:w-auto md:max-w-none md:p-7 lg:h-full"
               style={{ animationDelay: `${index * 120}ms` }}
             >
               {category.imageUrl || getCategoryImage(category.slug, category.title) ? (
@@ -131,11 +131,11 @@ export default async function Home() {
         id="sustainability"
         className="relative border-y border-[color:var(--color-border)] bg-[linear-gradient(180deg,rgba(245,241,234,0.75),rgba(250,249,246,0.95))]"
       >
-        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-20 md:px-10 lg:grid-cols-[0.95fr_1.05fr] lg:px-16">
-          <div className="group relative min-h-[34rem] overflow-hidden rounded-[2.25rem] border border-[color:var(--color-border)] bg-[color:var(--color-charcoal)] text-white shadow-[0_20px_80px_rgba(25,25,25,0.18)]">
+        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-14 sm:gap-8 sm:px-6 sm:py-20 md:px-10 lg:grid-cols-[0.95fr_1.05fr] lg:px-16">
+          <div className="group relative min-h-[30rem] overflow-hidden rounded-[1.75rem] border border-[color:var(--color-border)] bg-[color:var(--color-charcoal)] text-white shadow-[0_20px_80px_rgba(25,25,25,0.18)] sm:min-h-[34rem] sm:rounded-[2.25rem]">
             <Image alt="Reclaimed textiles in the Missy Miss atelier" className="object-cover transition duration-1000 group-hover:scale-105" fill sizes="(min-width: 1024px) 45vw, 100vw" src="/editorial/reclaimed-thread.webp" />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,20,20,.16),rgba(20,20,20,.88))]" />
-            <div className="relative flex min-h-[34rem] flex-col justify-end p-7 md:p-9">
+            <div className="relative flex min-h-[30rem] flex-col justify-end p-5 sm:min-h-[34rem] sm:p-9">
               <p className="section-label text-white/70">Reclaimed Thread</p>
               <h2 className="mt-3 max-w-lg font-display text-4xl leading-tight">
                 A sustainable movement dressed in elegance
@@ -194,8 +194,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-16 md:px-10 lg:px-16">
-        <div className="mb-8 flex items-center justify-between gap-4">
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 md:px-10 lg:px-16">
+        <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:mb-8 sm:flex-row sm:items-center sm:gap-4">
           <div>
             <p className="section-label">Featured Products</p>
             <h2 className="section-title">Best sellers, new arrivals, and editorial picks</h2>
@@ -211,7 +211,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-6 md:px-10 lg:px-16">
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 md:px-10 lg:px-16">
         <div className="grid gap-5 lg:grid-cols-3">
           {testimonials.map((quote) => (
             <blockquote
@@ -237,8 +237,8 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-20 md:px-10 lg:px-16">
-        <div className="rounded-[2.5rem] border border-[color:var(--color-border-strong)] bg-[linear-gradient(135deg,rgba(250,249,246,0.92),rgba(245,241,234,0.96),rgba(212,175,55,0.12))] px-6 py-8 shadow-[0_22px_80px_rgba(118,96,56,0.1)] sm:px-10 sm:py-12">
+      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 md:px-10 lg:px-16">
+        <div className="rounded-[1.75rem] border border-[color:var(--color-border-strong)] bg-[linear-gradient(135deg,rgba(250,249,246,0.92),rgba(245,241,234,0.96),rgba(212,175,55,0.12))] px-5 py-7 shadow-[0_22px_80px_rgba(118,96,56,0.1)] sm:rounded-[2.5rem] sm:px-10 sm:py-12">
           <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
             <div className="space-y-3">
               <p className="section-label">Newsletter</p>
@@ -263,7 +263,7 @@ export default async function Home() {
       </section>
 
       <section className="border-t border-[color:var(--color-border)]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-10 md:px-10 lg:flex-row lg:items-center lg:justify-between lg:px-16">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:gap-8 sm:px-6 sm:py-10 md:px-10 lg:flex-row lg:items-center lg:justify-between lg:px-16">
           <div className="space-y-4">
             <BrandLogo variant="symbol" className="w-20" />
             <p className="max-w-md text-sm leading-7 text-[color:var(--color-muted-foreground)]">

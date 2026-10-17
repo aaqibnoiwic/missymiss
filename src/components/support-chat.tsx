@@ -68,11 +68,11 @@ export function SupportChat() {
   }
 
   return (
-    <div className="fixed bottom-5 right-4 z-[100] flex flex-col items-end gap-3 sm:bottom-7 sm:right-7">
+    <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[100] flex flex-col items-end gap-2 sm:bottom-7 sm:right-7 sm:gap-3">
       {open ? (
         <section
           aria-label="Missy Miss customer support chat"
-          className="flex h-[min(680px,calc(100svh-112px))] w-[min(400px,calc(100vw-32px))] flex-col overflow-hidden rounded-[1.7rem] border border-[color:var(--color-border-strong)] bg-[color:var(--background)] shadow-[0_28px_100px_rgba(44,44,44,.24)]"
+          className="flex h-[min(680px,calc(100dvh-92px-env(safe-area-inset-top)))] w-[min(400px,calc(100vw-32px))] flex-col overflow-hidden rounded-[1.4rem] border border-[color:var(--color-border-strong)] bg-[color:var(--background)] shadow-[0_28px_100px_rgba(44,44,44,.24)] sm:rounded-[1.7rem]"
           role="dialog"
           aria-modal="false"
         >
@@ -162,12 +162,12 @@ export function SupportChat() {
       <button
         aria-expanded={open}
         aria-label={open ? "Close Missy Miss support chat" : "Chat with Missy Miss support"}
-        className="group flex h-14 items-center gap-3 rounded-full border border-[color:var(--color-gold-deep)] bg-[linear-gradient(135deg,var(--color-gold),var(--color-gold-deep))] pl-5 pr-5 text-sm font-semibold text-[color:var(--color-charcoal)] shadow-[0_16px_38px_rgba(88,66,26,.24)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_46px_rgba(88,66,26,.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-gold-deep)] focus-visible:ring-offset-2"
+        className="group flex size-14 items-center justify-center rounded-full border border-[color:var(--color-gold-deep)] bg-[linear-gradient(135deg,var(--color-gold),var(--color-gold-deep))] px-0 text-sm font-semibold text-[color:var(--color-charcoal)] shadow-[0_16px_38px_rgba(88,66,26,.24)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_46px_rgba(88,66,26,.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-gold-deep)] focus-visible:ring-offset-2 sm:h-14 sm:w-auto sm:gap-3 sm:px-5"
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
         {open ? <X className="size-5" aria-hidden="true" /> : <MessageCircle className="size-5 transition-transform group-hover:scale-105" aria-hidden="true" />}
-        <span>{open ? "Close" : "Chat with us"}</span>
+        <span className="sr-only sm:not-sr-only">{open ? "Close" : "Chat with us"}</span>
       </button>
     </div>
   );

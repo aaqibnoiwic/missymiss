@@ -160,7 +160,7 @@ export function ShopFilters({ categories, colors, filters, sizes }: ShopFiltersP
             value={values.q}
           />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
           <label className="flex h-11 shrink-0 cursor-pointer select-none items-center gap-2.5 rounded-xl border border-[color:var(--color-border-strong)] bg-white px-3.5 text-sm transition-colors hover:border-[color:var(--color-gold-deep)]/60">
             <input
               checked={values.availability}
@@ -171,7 +171,7 @@ export function ShopFilters({ categories, colors, filters, sizes }: ShopFiltersP
             />
             In stock only
           </label>
-          <div className="w-full sm:w-52">
+          <div className="w-full sm:w-52 sm:shrink-0">
             <Select id="sort" onChange={(value) => update("sort", value)} value={values.sort}>
               <option value="">Sort: Newest</option>
               {Object.entries(SORT_LABELS).map(([value, label]) => <option key={value} value={value}>Sort: {label}</option>)}

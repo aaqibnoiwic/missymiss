@@ -43,24 +43,24 @@ export default function CartPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-6 py-14 md:px-10 lg:px-16">
+    <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-14 md:px-10 lg:px-16">
       <p className="section-label">Shopping Bag</p>
-      <h1 className="mt-3 font-display text-5xl tracking-[-.05em]">Your considered edit</h1>
+      <h1 className="mt-3 font-display text-4xl leading-tight tracking-[-.05em] sm:text-5xl">Your considered edit</h1>
       {!items.length ? (
-        <div className="mt-10 rounded-[2rem] border border-dashed border-[color:var(--color-border-strong)] bg-white/70 p-12 text-center">
+        <div className="mt-10 rounded-[2rem] border border-dashed border-[color:var(--color-border-strong)] bg-white/70 p-7 text-center sm:p-12">
           <p className="text-[color:var(--color-muted-foreground)]">Your bag is waiting for something beautiful.</p>
           <Link className={buttonVariants({ className: "mt-6" })} href="/shop">Explore shop</Link>
         </div>
       ) : (
-        <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_22rem]">
+        <div className="mt-7 grid gap-6 sm:mt-10 sm:gap-8 lg:grid-cols-[1fr_22rem]">
           <div className="space-y-4">
             {items.map((item) => (
-              <article className="grid grid-cols-[6rem_1fr] gap-5 rounded-[2rem] border border-[color:var(--color-border)] bg-white/85 p-4 sm:grid-cols-[7rem_1fr_auto]" key={item.lineId}>
+              <article className="grid grid-cols-[5rem_minmax(0,1fr)] gap-3 rounded-[1.5rem] border border-[color:var(--color-border)] bg-white/85 p-3 sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:gap-5 sm:rounded-[2rem] sm:p-4" key={item.lineId}>
                 <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-[color:var(--color-paper)]">
                   {item.imageUrl ? <Image alt={item.name} className="object-cover" fill sizes="(max-width: 640px) 96px, 112px" src={item.imageUrl} /> : null}
                 </div>
                 <div className="space-y-2">
-                  <Link className="font-display text-2xl" href={`/products/${item.slug}`}>{item.name}</Link>
+                  <Link className="break-words font-display text-lg leading-tight sm:text-2xl" href={`/products/${item.slug}`}>{item.name}</Link>
                   <p className="text-sm text-[color:var(--color-muted-foreground)]">{item.variantName}</p>
                   <p className="font-semibold">{money(item.price)}</p>
                   <div className="flex items-center gap-2 pt-2">

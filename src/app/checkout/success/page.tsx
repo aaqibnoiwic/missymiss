@@ -38,11 +38,11 @@ export default async function CheckoutSuccessPage({
     : null;
 
   return (
-    <main className="mx-auto flex min-h-[65vh] max-w-3xl items-center px-6 py-16 text-center">
-      <div className="w-full rounded-[2.5rem] border border-[color:var(--color-border)] bg-white/85 p-10 shadow-[0_24px_80px_rgba(117,96,58,.1)]">
+    <main className="mx-auto flex min-h-[65vh] max-w-3xl items-center px-4 py-10 text-center sm:px-6 sm:py-16">
+      <div className="w-full rounded-[1.75rem] border border-[color:var(--color-border)] bg-white/85 p-5 shadow-[0_24px_80px_rgba(117,96,58,.1)] sm:rounded-[2.5rem] sm:p-10">
         <CheckCircle2 className="mx-auto size-12 text-[color:var(--color-gold-deep)]" />
         <p className="section-label mt-6">Order received</p>
-        <h1 className="mt-3 font-display text-5xl tracking-[-.05em]">Thank you for shopping with purpose.</h1>
+        <h1 className="mt-3 font-display text-3xl leading-tight tracking-[-.05em] sm:text-5xl">Thank you for shopping with purpose.</h1>
         <p className="mx-auto mt-5 max-w-xl leading-8 text-[color:var(--color-muted-foreground)]">
           {orderNumber ? `Order ${orderNumber} is saved.` : "Your order is saved."} We will confirm it and share Shiprocket tracking once dispatch begins.
         </p>
