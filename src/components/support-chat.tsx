@@ -7,10 +7,20 @@ type Message = { role: "user" | "assistant"; content: string };
 
 const welcome: Message = {
   role: "assistant",
-  content: "Welcome to Missy Miss. I’m here to help with products, orders, delivery and our policies. How may I assist you today?",
+  content: "Welcome to Missy Miss. I’m here to help with products, orders, delivery and our policies. You can chat with me in English or Hinglish. How may I assist you today?",
 };
 
 const suggestions = ["Shipping & delivery", "Exchange policy", "Cash on Delivery"];
+
+function renderAssistantMessage(content: string) {
+  const text = content.replace(/&#(?:x20|32);|&nbsp;/gi, " ");
+  const withEmoji = /\p{Extended_Pictographic}/u.test(text) ? text : `${text} 💬`;
+  return withEmoji.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={index} className="font-semibold">{part.slice(2, -2)}</strong>
+      : part,
+  );
+}
 
 export function SupportChat() {
   const [open, setOpen] = useState(false);
@@ -117,7 +127,7 @@ export function SupportChat() {
                   <MessageCircle className="size-5" aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="font-display text-xl leading-tight">Missy Miss</p>
+                  <p className="font-display text-xl leading-tight">Missy Miss AI</p>
                   <p className="mt-1 text-[10px] font-semibold uppercase tracking-[.2em] text-white/65">Customer care</p>
                 </div>
               </div>
@@ -132,7 +142,7 @@ export function SupportChat() {
             </div>
             <div className="relative mt-4 flex items-center gap-2 text-xs text-white/65">
               <span className="size-1.5 rounded-full bg-[color:var(--color-gold)]" />
-              <span>AI assisted · Human support, 10 AM–6 PM</span>
+              <span>Your personal shopping assistant ✨</span>
             </div>
           </header>
 
@@ -140,7 +150,7 @@ export function SupportChat() {
             {messages.map((message, index) => (
               <div className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`} key={`${index}-${message.role}`}>
                 <p className={`max-w-[88%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl px-4 py-3 text-[13px] leading-6 ${message.role === "user" ? "rounded-br-md bg-[color:var(--color-charcoal)] text-white" : "rounded-bl-md border border-[color:var(--color-border)] bg-white text-[color:var(--color-charcoal)] shadow-sm"}`}>
-                  {message.content}
+                  {message.role === "assistant" ? renderAssistantMessage(message.content) : message.content}
                 </p>
               </div>
             ))}
@@ -167,7 +177,7 @@ export function SupportChat() {
           <footer className="shrink-0 border-t border-[color:var(--color-border)] bg-white/70 px-4 pb-4 pt-3 sm:px-5">
             <p className="mb-3 flex items-start gap-1.5 text-[10px] leading-4 text-[color:var(--color-muted-foreground)]">
               <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[color:var(--color-gold-deep)]" aria-hidden="true" />
-              Messages are processed by Google Gemini. Please don’t share passwords, OTPs, or full card details.
+              Powered by Missy Miss AI. Please don’t share passwords, OTPs, or full card details.
             </p>
             <form className="flex items-center gap-2" onSubmit={handleSubmit}>
               <label className="sr-only" htmlFor="support-chat-input">Your message</label>

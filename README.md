@@ -41,12 +41,12 @@ cp .env.example .env.local
 - `SHIPROCKET_PICKUP_LOCATION`
 - `SHIPROCKET_PICKUP_POSTCODE`
 - `SHIPROCKET_WEBHOOK_SECRET`
-- `GEMINI_API_KEY` for the Missy Miss customer-support chatbot
+- `NVIDIA_API_KEY` for the Missy Miss customer-support chatbot
 
-The chatbot sends customer messages to Google Gemini for response generation
-through its stateless Interactions API. Its server-side API route keeps the
-Gemini key out of browser code and removes common order, email, phone, and
-payment identifiers before forwarding chat history. Add `GEMINI_API_KEY` to
+The chatbot uses NVIDIA's OpenAI-compatible Chat Completions API with
+`openai/gpt-oss-20b` for English and Hinglish replies. Its server-side API route keeps the
+NVIDIA key out of browser code and removes common order, email, phone, and
+payment identifiers before forwarding chat history. Add `NVIDIA_API_KEY` to
 the deployment environment as well as local `.env.local` when deploying. The storefront CMS still
 needs `DATABASE_URL` for database-managed content.
 
