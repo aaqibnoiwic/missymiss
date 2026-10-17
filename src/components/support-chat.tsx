@@ -19,13 +19,46 @@ export function SupportChat() {
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, sending, open]);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
+    if (!open) return;
+
+    // Mobile keyboards resize/pan the visual viewport, not always the layout viewport.
+    const viewport = window.visualViewport;
+    let frame = 0;
+    const updateViewport = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const container = containerRef.current;
+        if (!container) return;
+        container.style.setProperty("--chat-height", `${viewport?.height ?? window.innerHeight}px`);
+        container.style.setProperty("--chat-top", `${viewport?.offsetTop ?? 0}px`);
+        container.style.setProperty("--chat-left", `${viewport?.offsetLeft ?? 0}px`);
+        container.style.setProperty("--chat-width", `${viewport?.width ?? window.innerWidth}px`);
+        listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "instant" });
+      });
+    };
+
+    updateViewport();
+    viewport?.addEventListener("resize", updateViewport);
+    viewport?.addEventListener("scroll", updateViewport);
+    window.addEventListener("resize", updateViewport);
+    // Let touch users open the keyboard when they are ready to type.
+    if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      inputRef.current?.focus({ preventScroll: true });
+    }
+
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport?.removeEventListener("resize", updateViewport);
+      viewport?.removeEventListener("scroll", updateViewport);
+      window.removeEventListener("resize", updateViewport);
+    };
   }, [open]);
 
   async function sendMessage(value = input) {
@@ -68,15 +101,15 @@ export function SupportChat() {
   }
 
   return (
-    <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[100] flex flex-col items-end gap-2 sm:bottom-7 sm:right-7 sm:gap-3">
+    <div ref={containerRef} data-open={open} className="support-chat fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[100] flex flex-col items-end gap-2 sm:bottom-7 sm:right-7 sm:gap-3">
       {open ? (
         <section
           aria-label="Missy Miss customer support chat"
-          className="flex h-[min(680px,calc(100dvh-92px-env(safe-area-inset-top)))] w-[min(400px,calc(100vw-32px))] flex-col overflow-hidden rounded-[1.4rem] border border-[color:var(--color-border-strong)] bg-[color:var(--background)] shadow-[0_28px_100px_rgba(44,44,44,.24)] sm:rounded-[1.7rem]"
+          className="support-chat-panel pointer-events-auto flex min-h-0 w-full max-w-[400px] flex-col overflow-hidden rounded-[1.4rem] border border-[color:var(--color-border-strong)] bg-[color:var(--background)] shadow-[0_28px_100px_rgba(44,44,44,.24)] sm:rounded-[1.7rem]"
           role="dialog"
           aria-modal="false"
         >
-          <header className="relative overflow-hidden bg-[color:var(--color-charcoal)] px-5 pb-5 pt-5 text-white">
+          <header className="relative shrink-0 overflow-hidden bg-[color:var(--color-charcoal)] px-5 pb-5 pt-5 text-white">
             <div className="absolute -right-10 -top-16 size-40 rounded-full bg-[color:var(--color-gold)]/20 blur-3xl" />
             <div className="relative flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -103,10 +136,10 @@ export function SupportChat() {
             </div>
           </header>
 
-          <div aria-live="polite" className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-5" ref={listRef}>
+          <div aria-live="polite" className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-5 sm:px-5" ref={listRef}>
             {messages.map((message, index) => (
               <div className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`} key={`${index}-${message.role}`}>
-                <p className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-[13px] leading-6 ${message.role === "user" ? "rounded-br-md bg-[color:var(--color-charcoal)] text-white" : "rounded-bl-md border border-[color:var(--color-border)] bg-white text-[color:var(--color-charcoal)] shadow-sm"}`}>
+                <p className={`max-w-[88%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl px-4 py-3 text-[13px] leading-6 ${message.role === "user" ? "rounded-br-md bg-[color:var(--color-charcoal)] text-white" : "rounded-bl-md border border-[color:var(--color-border)] bg-white text-[color:var(--color-charcoal)] shadow-sm"}`}>
                   {message.content}
                 </p>
               </div>
@@ -131,7 +164,7 @@ export function SupportChat() {
             ) : null}
           </div>
 
-          <footer className="border-t border-[color:var(--color-border)] bg-white/70 px-4 pb-4 pt-3 sm:px-5">
+          <footer className="shrink-0 border-t border-[color:var(--color-border)] bg-white/70 px-4 pb-4 pt-3 sm:px-5">
             <p className="mb-3 flex items-start gap-1.5 text-[10px] leading-4 text-[color:var(--color-muted-foreground)]">
               <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[color:var(--color-gold-deep)]" aria-hidden="true" />
               Messages are processed by Google Gemini. Please don’t share passwords, OTPs, or full card details.
@@ -140,7 +173,7 @@ export function SupportChat() {
               <label className="sr-only" htmlFor="support-chat-input">Your message</label>
               <input
                 autoComplete="off"
-                className="h-12 min-w-0 flex-1 rounded-full border border-[color:var(--color-border)] bg-[color:var(--background)] px-4 text-sm text-[color:var(--color-charcoal)] outline-none placeholder:text-[color:var(--color-muted-foreground)] focus:border-[color:var(--color-gold-deep)] focus:ring-2 focus:ring-[color:var(--color-gold)]/20"
+                className="h-12 min-w-0 flex-1 rounded-full border border-[color:var(--color-border)] bg-[color:var(--background)] px-4 text-base text-[color:var(--color-charcoal)] outline-none placeholder:text-[color:var(--color-muted-foreground)] focus:border-[color:var(--color-gold-deep)] focus:ring-2 focus:ring-[color:var(--color-gold)]/20"
                 id="support-chat-input"
                 maxLength={1200}
                 onChange={(event) => setInput(event.target.value)}
