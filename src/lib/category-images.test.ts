@@ -11,7 +11,7 @@ test("getCategoryQuickLink points to the matching collection and thumbnail", () 
     }),
     {
       href: "/collections/coord-sets",
-      imageUrl: "/categories/coord-sets.webp",
+      imageUrl: "/categories/coord-sets.jpeg",
       title: "Coord sets",
     },
   );

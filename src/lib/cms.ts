@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { featuredCategories } from "@/lib/category-images";
 import { buildCollectionTypeFilter } from "@/lib/shop-filter-query";
 
 const now = () => new Date();
@@ -67,7 +68,7 @@ export async function getNavigationCategories() {
 export async function getHomeData() {
   const emptyData = {
     banners: [],
-    categories: [],
+    categories: featuredCategories,
     featuredProducts: [],
     newArrivals: [],
     testimonials: [],
@@ -101,21 +102,10 @@ export async function getHomeData() {
         }),
       ]);
 
-    const featuredCategorySlugs = [
-      "office-wear",
-      "coord-sets",
-      "lounge-wear",
-      "tops-shirts",
-      "dresses",
-      "reclaimed-thread",
-    ];
-    const prioritizedCategories = categories.sort((left, right) => {
-      const leftIndex = featuredCategorySlugs.indexOf(left.slug);
-      const rightIndex = featuredCategorySlugs.indexOf(right.slug);
-      const normalizedLeft = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
-      const normalizedRight = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
-      return normalizedLeft - normalizedRight;
-    }).slice(0, 6);
+    const prioritizedCategories = featuredCategories.map((category) => ({
+      ...categories.find((record) => record.slug === category.slug),
+      ...category,
+    }));
 
     return {
       banners,

@@ -1,4 +1,4 @@
-import { ArrowRight, Leaf, Star } from "lucide-react";
+import { Leaf, Star } from "lucide-react";
 import { CdnAwareImage as Image } from "@/components/cdn-aware-image";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
@@ -7,7 +7,6 @@ import { HeroCarousel } from "@/components/hero-carousel";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { getCategoryImage } from "@/lib/category-images";
 import { getHomeData } from "@/lib/cms";
 
 export default async function Home() {
@@ -67,46 +66,26 @@ export default async function Home() {
             View Collection
           </Link>
         </div>
-        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:gap-4 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:gap-5 md:overflow-visible md:px-0 md:pb-0 lg:auto-rows-fr xl:grid-cols-3">
-          {categories.map((category, index) => (
-            <article
-              key={category.title}
-              className="group relative h-[21rem] w-[82vw] max-w-[20rem] shrink-0 snap-start overflow-hidden rounded-[1.5rem] border border-[color:var(--color-border)] bg-white/80 p-4 shadow-[0_18px_60px_rgba(116,94,56,0.08)] transition duration-300 hover:-translate-y-1 hover:border-[color:var(--color-gold-deep)]/40 hover:shadow-[0_28px_80px_rgba(116,94,56,.16)] sm:h-[22rem] sm:rounded-[2rem] sm:p-5 md:h-auto md:min-h-80 md:w-auto md:max-w-none md:p-7 lg:h-full"
-              style={{ animationDelay: `${index * 120}ms` }}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 sm:gap-5 lg:grid-cols-6">
+          {categories.map((category) => (
+            <Link
+              key={category.slug}
+              href={`/collections/${category.slug}`}
+              className="group min-w-0 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-gold-deep)] focus-visible:ring-offset-4"
             >
-              {category.imageUrl || getCategoryImage(category.slug, category.title) ? (
+              <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-[color:var(--color-paper)]">
                 <Image
                   alt={category.title}
-                  className="object-cover transition duration-700 group-hover:scale-105"
+                  className="object-cover transition duration-500 group-hover:scale-105"
                   fill
-                  sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
-                  src={category.imageUrl || getCategoryImage(category.slug, category.title)}
+                  sizes="(min-width: 1280px) 176px, (min-width: 1024px) 16vw, (min-width: 640px) 30vw, 45vw"
+                  src={category.imageUrl}
                 />
-              ) : (
-                <div className="absolute inset-0 hero-mesh" />
-              )}
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,20,20,.05),rgba(20,20,20,.82))]" />
-              <div className="relative flex h-full min-h-0 flex-col justify-end gap-3 text-white md:min-h-[16rem] md:gap-4 lg:h-full">
-                <span className="inline-flex rounded-full border border-white/70 bg-white/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-charcoal)] md:px-3 md:text-xs md:tracking-[0.25em] lg:w-fit">
-                  {category.eyebrow || category.collectionType}
-                </span>
-                <div className="space-y-2 md:space-y-3 lg:min-h-[9.5rem]">
-                  <h3 className="font-display text-2xl md:text-3xl">
-                    {category.title}
-                  </h3>
-                  <p className="line-clamp-2 max-w-sm text-xs leading-5 text-white/75 md:line-clamp-none md:text-sm md:leading-7">
-                    {category.description}
-                  </p>
-                </div>
-                <a
-                  className="flex items-center gap-2 text-sm font-semibold lg:mt-auto"
-                  href={`/collections/${category.slug}`}
-                >
-                  Discover
-                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-                </a>
               </div>
-            </article>
+              <h3 className="mt-3 text-center text-sm font-semibold text-[color:var(--color-charcoal)] transition group-hover:text-[color:var(--color-gold-deep)]">
+                {category.title}
+              </h3>
+            </Link>
           ))}
         </div>
       </section>
