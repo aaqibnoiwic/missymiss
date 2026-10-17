@@ -41,12 +41,13 @@ cp .env.example .env.local
 - `SHIPROCKET_PICKUP_LOCATION`
 - `SHIPROCKET_PICKUP_POSTCODE`
 - `SHIPROCKET_WEBHOOK_SECRET`
-- `NVIDIA_API_KEY` for the Missy Miss customer-support chatbot
+- `NVIDIA_API_KEY` for admin product image analysis
+- `NVIDIA_API_KEY2` for the Missy Miss customer-support chatbot
 
 The chatbot uses NVIDIA's OpenAI-compatible Chat Completions API with
 `openai/gpt-oss-20b` for English and Hinglish replies. Its server-side API route keeps the
 NVIDIA key out of browser code and removes common order, email, phone, and
-payment identifiers before forwarding chat history. Add `NVIDIA_API_KEY` to
+payment identifiers before forwarding chat history. Add `NVIDIA_API_KEY2` to
 the deployment environment as well as local `.env.local` when deploying. The storefront CMS still
 needs `DATABASE_URL` for database-managed content.
 

@@ -309,7 +309,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ answer: "Please wait a moment before sending another message." }, { status: 429 });
   }
 
-  const apiKey = process.env.NVIDIA_API_KEY;
+  const apiKey = process.env.NVIDIA_API_KEY2;
   if (!apiKey) {
     return Response.json({ answer: `I’m unable to respond right now. ${supportDetails}` }, { status: 503 });
   }
