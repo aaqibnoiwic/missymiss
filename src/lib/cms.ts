@@ -2,8 +2,10 @@ import { prisma } from "@/lib/db";
 import { buildCollectionTypeFilter } from "@/lib/shop-filter-query";
 
 const now = () => new Date();
+const hasDatabaseUrl = () => Boolean(process.env.DATABASE_URL?.trim());
 
 export async function getEnabledBanners(scope: string, targetSlug = "") {
+  if (!hasDatabaseUrl()) return [];
   const current = now();
 
   return prisma.banner.findMany({
@@ -19,6 +21,7 @@ export async function getEnabledBanners(scope: string, targetSlug = "") {
 }
 
 export async function getPublishedPage(slug: string) {
+  if (!hasDatabaseUrl()) return null;
   return prisma.sitePage.findFirst({
     where: {
       slug,
@@ -28,6 +31,7 @@ export async function getPublishedPage(slug: string) {
 }
 
 export async function getPublishedCategory(slug: string) {
+  if (!hasDatabaseUrl()) return null;
   return prisma.category.findFirst({
     where: {
       slug,
@@ -51,6 +55,7 @@ export async function getPublishedCategory(slug: string) {
 }
 
 export async function getNavigationCategories() {
+  if (!hasDatabaseUrl()) return [];
   return prisma.category.findMany({
     where: {
       isPublished: true,
@@ -60,55 +65,69 @@ export async function getNavigationCategories() {
 }
 
 export async function getHomeData() {
-  const [banners, categories, featuredProducts, newArrivals, testimonials] =
-    await Promise.all([
-      getEnabledBanners("home"),
-      prisma.category.findMany({
-        where: { isPublished: true },
-        orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
-      }),
-      prisma.product.findMany({
-        where: { isPublished: true, isFeatured: true },
-        include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }] }, variants: { where: { isEnabled: true }, orderBy: { sortOrder: "asc" } } },
-        orderBy: { updatedAt: "desc" },
-        take: 4,
-      }),
-      prisma.product.findMany({
-        where: { isPublished: true, isNewArrival: true },
-        include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }] }, variants: { where: { isEnabled: true }, orderBy: { sortOrder: "asc" } } },
-        orderBy: { updatedAt: "desc" },
-        take: 4,
-      }),
-      prisma.testimonial.findMany({
-        where: { isEnabled: true },
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-        take: 6,
-      }),
-    ]);
-
-  const featuredCategorySlugs = [
-    "office-wear",
-    "coord-sets",
-    "lounge-wear",
-    "tops-shirts",
-    "dresses",
-    "reclaimed-thread",
-  ];
-  const prioritizedCategories = categories.sort((left, right) => {
-    const leftIndex = featuredCategorySlugs.indexOf(left.slug);
-    const rightIndex = featuredCategorySlugs.indexOf(right.slug);
-    const normalizedLeft = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
-    const normalizedRight = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
-    return normalizedLeft - normalizedRight;
-  }).slice(0, 6);
-
-  return {
-    banners,
-    categories: prioritizedCategories,
-    featuredProducts,
-    newArrivals,
-    testimonials,
+  const emptyData = {
+    banners: [],
+    categories: [],
+    featuredProducts: [],
+    newArrivals: [],
+    testimonials: [],
   };
+  if (!hasDatabaseUrl()) return emptyData;
+
+  try {
+    const [banners, categories, featuredProducts, newArrivals, testimonials] =
+      await Promise.all([
+        getEnabledBanners("home"),
+        prisma.category.findMany({
+          where: { isPublished: true },
+          orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+        }),
+        prisma.product.findMany({
+          where: { isPublished: true, isFeatured: true },
+          include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }] }, variants: { where: { isEnabled: true }, orderBy: { sortOrder: "asc" } } },
+          orderBy: { updatedAt: "desc" },
+          take: 4,
+        }),
+        prisma.product.findMany({
+          where: { isPublished: true, isNewArrival: true },
+          include: { images: { orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }] }, variants: { where: { isEnabled: true }, orderBy: { sortOrder: "asc" } } },
+          orderBy: { updatedAt: "desc" },
+          take: 4,
+        }),
+        prisma.testimonial.findMany({
+          where: { isEnabled: true },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+          take: 6,
+        }),
+      ]);
+
+    const featuredCategorySlugs = [
+      "office-wear",
+      "coord-sets",
+      "lounge-wear",
+      "tops-shirts",
+      "dresses",
+      "reclaimed-thread",
+    ];
+    const prioritizedCategories = categories.sort((left, right) => {
+      const leftIndex = featuredCategorySlugs.indexOf(left.slug);
+      const rightIndex = featuredCategorySlugs.indexOf(right.slug);
+      const normalizedLeft = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
+      const normalizedRight = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
+      return normalizedLeft - normalizedRight;
+    }).slice(0, 6);
+
+    return {
+      banners,
+      categories: prioritizedCategories,
+      featuredProducts,
+      newArrivals,
+      testimonials,
+    };
+  } catch {
+    console.warn("[cms] Homepage data is unavailable; rendering without CMS content.");
+    return emptyData;
+  }
 }
 
 export async function getShopProducts(options: {
@@ -122,6 +141,7 @@ export async function getShopProducts(options: {
   availability?: string;
   sort?: string;
 } = {}) {
+  if (!hasDatabaseUrl()) return [];
   const { q, collection, category, size, color, minPrice, maxPrice, availability, sort } = options;
   const collectionTypeFilter = buildCollectionTypeFilter(collection);
   return prisma.product.findMany({
@@ -153,6 +173,7 @@ export async function getShopProducts(options: {
 }
 
 export async function getShopFilterOptions() {
+  if (!hasDatabaseUrl()) return [];
   return prisma.product.findMany({
     where: { isPublished: true },
     select: {
@@ -167,6 +188,17 @@ export async function getShopFilterOptions() {
 }
 
 export async function getAdminCmsData() {
+  if (!hasDatabaseUrl()) {
+    return {
+      pages: [],
+      categories: [],
+      banners: [],
+      galleryImages: [],
+      products: [],
+      testimonials: [],
+      mediaAssets: [],
+    };
+  }
   const [
     pages,
     categories,
